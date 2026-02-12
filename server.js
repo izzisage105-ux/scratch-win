@@ -511,6 +511,118 @@ app.post("/game/play", authMiddleware, async (req, res) => {
   }
 });
 
+// ========== AUTO PLAY ==========
+app.post("/game/auto-play", authMiddleware, async (req, res) => {
+  try {
+    const { stake, mode = 'demo', count } = req.body;
+    if (![150, 300, 500, 1000].includes(stake)) {
+      return res.status(400).json({ success: false, message: "Invalid stake" });
+    }
+    if (!count || count < 1 || count > 500) {
+      return res.status(400).json({ success: false, message: "Count must be between 1 and 500" });
+    }
+
+    // Get user
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+    if (userError || !user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const balanceField = mode === 'demo' ? 'demoBalance' : 'realBalance';
+    const balance = mode === 'demo' ? user.demoBalance : user.realBalance;
+
+    // Check sufficient balance
+    if (balance < stake * count) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient balance. Need ₦${(stake * count).toLocaleString()}, you have ₦${balance.toLocaleString()}`
+      });
+    }
+
+    let newBalance = balance;
+    let totalStaked = 0;
+    let totalWon = 0;
+    let wins = 0;
+    const games = [];
+
+    // Process each play
+    for (let i = 0; i < count; i++) {
+      const section = gameLogic.getSectionFromStake(stake);
+      let grid = gameLogic.generateGrid(section, mode);
+      grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
+      const result = gameLogic.checkForWin(grid);
+
+      totalStaked += stake;
+      if (result.isWin) {
+        totalWon += result.winAmount;
+        wins++;
+        newBalance += result.winAmount;
+      }
+      newBalance -= stake;
+
+      // Record game (use timestamp + i to avoid duplicate IDs)
+      games.push({
+        id: `${Date.now()}-${i}-${user.id}`,
+        userId: user.id,
+        stake,
+        mode,
+        winAmount: result.winAmount,
+        result: result.isWin ? "win" : "loss",
+        gridValues: grid,
+        scratchCount: 0,
+        createdAt: new Date().toISOString(),
+        matchingIndices: result.matchingIndices || [],
+        newBalance: newBalance // will be overwritten by final balance later
+      });
+    }
+
+    // Prepare user updates
+    const updates = {};
+    if (mode === 'demo') {
+      updates.demoBalance = newBalance;
+      updates.totalStakedDemo = (user.totalStakedDemo || 0) + totalStaked;
+      updates.totalWonDemo = (user.totalWonDemo || 0) + totalWon;
+    } else {
+      updates.realBalance = newBalance;
+      updates.totalStakedReal = (user.totalStakedReal || 0) + totalStaked;
+      updates.totalWonReal = (user.totalWonReal || 0) + totalWon;
+    }
+    updates.gamesPlayed = (user.gamesPlayed || 0) + count;
+    updates.lastGamePlayed = new Date().toISOString();
+
+    // Update user
+    const { error: updateError } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', user.id);
+    if (updateError) throw updateError;
+
+    // Insert all games
+    const { error: insertError } = await supabase
+      .from('games')
+      .insert(games);
+    if (insertError) throw insertError;
+
+    // Return summary
+    res.json({
+      success: true,
+      message: `✅ Played ${count} games. Wins: ${wins}, Total win: ₦${totalWon.toLocaleString()}, Net: ₦${(totalWon - totalStaked).toLocaleString()}`,
+      newBalance,
+      totalStaked,
+      totalWon,
+      wins,
+      games: games.slice(-3) // send last 3 grids for display (optional)
+    });
+  } catch (error) {
+    console.error("❌ Auto-play error:", error);
+    res.status(500).json({ success: false, message: "Auto-play server error" });
+  }
+});
+
 app.get("/user/game-history", authMiddleware, async (req, res) => {
   try {
     const { data: games, error } = await supabase

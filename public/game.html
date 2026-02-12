@@ -470,12 +470,48 @@
     <button onclick="closeReferralModal()" class="btn" style="background: #333; margin-top: 10px;">CLOSE</button>
   </div>
 
+  <!-- AUTO SCRATCH MODAL -->
+  <div id="auto-modal" class="win-modal" style="max-width: 400px; display: none;">
+    <h3 style="color: var(--gold);">⚡ AUTO SCRATCH</h3>
+    <p style="font-size: 14px;">Play multiple games automatically</p>
+
+    <div style="margin: 20px 0;">
+      <select id="auto-stake" class="input-field" style="background:#222; color:white;">
+        <option value="150">₦150 per game</option>
+        <option value="300">₦300 per game</option>
+        <option value="500">₦500 per game</option>
+        <option value="1000">₦1000 per game</option>
+      </select>
+
+      <select id="auto-mode" class="input-field" style="background:#222; color:white;">
+        <option value="demo">Demo Mode</option>
+        <option value="real">Real Mode</option>
+      </select>
+
+      <select id="auto-count" class="input-field" style="background:#222; color:white;">
+        <option value="10">10 games</option>
+        <option value="30">30 games</option>
+        <option value="50">50 games</option>
+        <option value="100">100 games</option>
+        <option value="500">500 games</option>
+      </select>
+    </div>
+
+    <div id="auto-preview" style="font-size: 14px; color: #ccc; margin: 10px 0;">
+      Total cost: <span id="auto-total-cost">₦1,500</span>
+    </div>
+
+    <button id="start-auto-btn" class="btn" onclick="startAutoPlay()">▶️ START AUTO</button>
+    <button class="btn" style="background:#333;" onclick="closeAutoModal()">CLOSE</button>
+  </div>
+
   <!-- HEADER -->
   <div class="header">
     <div class="top-bar">
       <h2 class="logo">SCRATCH & WIN</h2>
       <div class="header-buttons">
         <button class="dep-btn" onclick="showReferralModal()">🔗 Refer & Earn</button>
+        <button class="dep-btn" onclick="openAutoModal()">⚡ AUTO</button>
         <button class="dep-btn" onclick="document.getElementById('deposit-screen').classList.add('visible')">+ DEPOSIT</button>
         <button id="mute-btn">🔊</button>
       </div>
@@ -1078,6 +1114,81 @@
       alert('✅ Referral code copied!');
     }
 
+    // ========== AUTO SCRATCH ==========
+    function openAutoModal() {
+      updateAutoTotal();
+      document.getElementById('auto-modal').style.display = 'block';
+    }
+
+    function closeAutoModal() {
+      document.getElementById('auto-modal').style.display = 'none';
+    }
+
+    function updateAutoTotal() {
+      const stake = parseInt(document.getElementById('auto-stake').value);
+      const count = parseInt(document.getElementById('auto-count').value);
+      const total = stake * count;
+      document.getElementById('auto-total-cost').innerText = '₦' + total.toLocaleString();
+    }
+
+    async function startAutoPlay() {
+      const stake = parseInt(document.getElementById('auto-stake').value);
+      const mode = document.getElementById('auto-mode').value;
+      const count = parseInt(document.getElementById('auto-count').value);
+      const token = localStorage.getItem('token');
+
+      const btn = document.getElementById('start-auto-btn');
+      btn.disabled = true;
+      btn.textContent = 'PROCESSING...';
+
+      try {
+        const res = await fetch(API + '/game/auto-play', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ stake, mode, count })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert(`✅ ${data.message}\nNew balance: ₦${data.newBalance.toLocaleString()}`);
+          // Update balance on screen
+          if (mode === 'real') {
+            document.getElementById('real-bal').innerText = data.newBalance.toLocaleString();
+            if (currentUser) currentUser.balance = data.newBalance;
+          } else {
+            document.getElementById('demo-bal').innerText = data.newBalance.toLocaleString();
+            if (currentUser) currentUser.demoBalance = data.newBalance;
+          }
+          closeAutoModal();
+          // Show the last game grid
+          if (data.games && data.games.length > 0) {
+            const lastGame = data.games[data.games.length - 1];
+            renderGridFromGame(lastGame);
+          }
+        } else {
+          alert('Auto-play failed: ' + data.message);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error during auto-play');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '▶️ START AUTO';
+      }
+    }
+
+    // Helper to render grid from game object
+    function renderGridFromGame(game) {
+      const grid = document.getElementById('main-grid');
+      grid.innerHTML = '';
+      game.gridValues.forEach((val, idx) => {
+        createScratchBox(grid, val, idx, game.matchingIndices || []);
+      });
+    }
+
     // ========== SCREEN UTILS ==========
     function closeScreens() {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
@@ -1145,6 +1256,14 @@
         document.removeEventListener('click', startAudio);
       }, { once: true });
     })();
+
+    // ========== EVENT LISTENERS FOR AUTO MODAL ==========
+    document.addEventListener('DOMContentLoaded', function() {
+      const stakeSelect = document.getElementById('auto-stake');
+      const countSelect = document.getElementById('auto-count');
+      if (stakeSelect) stakeSelect.addEventListener('change', updateAutoTotal);
+      if (countSelect) countSelect.addEventListener('change', updateAutoTotal);
+    });
 
     // ========== PAGE LOAD ==========
     window.onload = async function() {
