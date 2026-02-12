@@ -1216,19 +1216,29 @@ app.post("/api/admin/reject-deposit/:requestId", adminMiddleware, async (req, re
 
 app.get("/api/admin/referral-stats", adminMiddleware, async (req, res) => {
   try {
+    // Get all users with referral codes – use correct column name "createdAt"
     const { data: users, error: usersError } = await supabaseAdmin
       .from('users')
-      .select('id, username, referral_code, total_referral_deposits, referral_earnings, created_at')
+      .select('id, username, referral_code, total_referral_deposits, referral_earnings, "createdAt"')
       .not('referral_code', 'is', null);
-    if (usersError) throw usersError;
+    
+    if (usersError) {
+      console.error('❌ Supabase users error:', usersError);
+      return res.status(500).json({ success: false, message: "Database error: " + usersError.message });
+    }
 
+    // For each user, get count of referrals
     const stats = await Promise.all(users.map(async (user) => {
       const { count, error: countError } = await supabaseAdmin
         .from('referrals')
         .select('*', { count: 'exact', head: true })
         .eq('referrer_id', user.id);
-      if (countError) throw countError;
-
+      
+      if (countError) {
+        console.error(`❌ Count error for user ${user.id}:`, countError);
+        return { ...user, referredCount: 0 };
+      }
+      
       return {
         ...user,
         referredCount: count
@@ -1237,8 +1247,8 @@ app.get("/api/admin/referral-stats", adminMiddleware, async (req, res) => {
 
     res.json({ success: true, stats });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error('❌ Referral stats catch block:', error);
+    res.status(500).json({ success: false, message: "Server error: " + error.message });
   }
 });
 
