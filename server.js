@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ========== STATIC FILES (PUBLIC FOLDER) ==========
+// ========== STATIC FILES ==========
 app.use(express.static(path.join(__dirname, 'public')));
 
 console.log('📁 Current directory:', __dirname);
@@ -20,6 +20,10 @@ console.log('📄 Files in dir:', require('fs').readdirSync(__dirname));
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+  console.error('❌ Missing Supabase environment variables');
+}
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -192,6 +196,7 @@ async function initializeAdminAccounts() {
     if (!existing) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(acc.password, salt);
+      const referralCode = await getUniqueReferralCode();
       const newAdmin = {
         id: `admin-${Date.now()}-${acc.username}`,
         phone: acc.phone,
@@ -213,15 +218,18 @@ async function initializeAdminAccounts() {
         gamesPlayed: 0,
         isAdmin: true,
         adminRole: acc.name,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        referral_code: referralCode,
+        referred_by: null,
+        referral_earnings: 0,
+        total_referral_deposits: 0
       };
       await supabaseAdmin.from('users').insert(newAdmin);
-      console.log(`✅ Created admin: ${acc.username}`);
+      console.log(`✅ Created admin: ${acc.username} with referral code ${referralCode}`);
     }
   }
 }
 
-// Call after server starts
 setTimeout(() => initializeAdminAccounts(), 1000);
 
 // ========== ROOT ROUTE ==========
@@ -821,7 +829,7 @@ app.get("/api/admin/users", adminMiddleware, async (req, res) => {
   try {
     const { data: users, error } = await supabaseAdmin
       .from('users')
-      .select('id, username, phone, depositTier, realBalance, demoBalance, totalStakedReal, totalWonReal, withdrawalUnlocked, bankName, lastGamePlayed, createdAt');
+      .select('id, username, phone, depositTier, realBalance, demoBalance, totalStakedReal, totalWonReal, withdrawalUnlocked, bankName, lastGamePlayed, createdAt, isAdmin, referral_code');
     if (error) throw error;
 
     const formatted = users.map(user => ({
@@ -1077,68 +1085,112 @@ app.get("/api/admin/deposit-requests", adminMiddleware, async (req, res) => {
   }
 });
 
+// ========== APPROVE DEPOSIT – IDEMPOTENT & ATOMIC ==========
 app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, res) => {
   try {
     const { requestId } = req.params;
     const { notes } = req.body;
 
-    const { data: deposit, error: fetchError } = await supabaseAdmin
-      .from('deposits')
-      .select('*')
-      .eq('id', requestId)
-      .single();
-    if (fetchError || !deposit) return res.status(404).json({ success: false, message: "Deposit not found" });
-
-    const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('id', deposit.userId)
-      .single();
-    if (userError) throw userError;
-
-    const newBalance = (user.realBalance || 0) + deposit.amount;
-    await supabaseAdmin
-      .from('users')
-      .update({ realBalance: newBalance })
-      .eq('id', deposit.userId);
-
-    if (user.referred_by) {
-      const commissionRate = 0.05;
-      const commission = deposit.amount * commissionRate;
-
-      await supabaseAdmin.rpc('increment_referral_stats', {
-        referrer_id: user.referred_by,
-        deposit_amount: deposit.amount,
-        commission_amount: commission
-      });
-
-      await supabaseAdmin
-        .from('referrals')
-        .update({
-          total_deposited: supabaseAdmin.raw('total_deposited + ?', [deposit.amount]),
-          commission_earned: supabaseAdmin.raw('commission_earned + ?', [commission])
-        })
-        .eq('referred_id', deposit.userId);
-
-      await supabaseAdmin.rpc('add_to_user_balance', {
-        user_id: user.referred_by,
-        amount: commission
-      });
-    }
-
-    await supabaseAdmin
+    // 1️⃣ Atomically update deposit status from 'pending' to 'approved'
+    //    This ensures only one approval succeeds.
+    const { data: deposit, error: updateError } = await supabaseAdmin
       .from('deposits')
       .update({
         status: 'approved',
         approvedAt: new Date().toISOString(),
         adminNotes: notes || "Approved by admin"
       })
-      .eq('id', requestId);
+      .eq('id', requestId)
+      .eq('status', 'pending')  // critical: only if still pending
+      .select();
+
+    if (updateError) throw updateError;
+    if (!deposit || deposit.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Deposit request not found or already processed" 
+      });
+    }
+
+    const approvedDeposit = deposit[0];
+
+    // 2️⃣ Get user to update balance and check referral
+    const { data: user, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', approvedDeposit.userId)
+      .single();
+    if (userError) throw userError;
+
+    // 3️⃣ Add deposit amount to user's real balance
+    const newBalance = (user.realBalance || 0) + approvedDeposit.amount;
+    const { error: balanceError } = await supabaseAdmin
+      .from('users')
+      .update({ realBalance: newBalance })
+      .eq('id', approvedDeposit.userId);
+    if (balanceError) throw balanceError;
+
+    // 4️⃣ Process referral bonus (non‑critical – won't rollback deposit)
+    if (user.referred_by) {
+      try {
+        const commissionRate = 0.05;
+        const commission = approvedDeposit.amount * commissionRate;
+
+        // Try RPC, fallback to direct updates
+        const { error: rpc1Error } = await supabaseAdmin.rpc('increment_referral_stats', {
+          referrer_id: user.referred_by,
+          deposit_amount: approvedDeposit.amount,
+          commission_amount: commission
+        });
+
+        if (rpc1Error) {
+          console.warn('⚠️ increment_referral_stats RPC failed, using direct update:', rpc1Error.message);
+          await supabaseAdmin
+            .from('users')
+            .update({
+              total_referral_deposits: supabaseAdmin.raw('COALESCE(total_referral_deposits,0) + ?', [approvedDeposit.amount]),
+              referral_earnings: supabaseAdmin.raw('COALESCE(referral_earnings,0) + ?', [commission])
+            })
+            .eq('id', user.referred_by);
+        }
+
+        // Update referrals table
+        const { error: refUpdateError } = await supabaseAdmin
+          .from('referrals')
+          .update({
+            total_deposited: supabaseAdmin.raw('COALESCE(total_deposited,0) + ?', [approvedDeposit.amount]),
+            commission_earned: supabaseAdmin.raw('COALESCE(commission_earned,0) + ?', [commission])
+          })
+          .eq('referred_id', approvedDeposit.userId);
+        if (refUpdateError) console.error('❌ referrals update error:', refUpdateError);
+
+        // Add commission to referrer's real balance
+        const { error: rpc2Error } = await supabaseAdmin.rpc('add_to_user_balance', {
+          user_id: user.referred_by,
+          amount: commission
+        });
+
+        if (rpc2Error) {
+          console.warn('⚠️ add_to_user_balance RPC failed, using direct update:', rpc2Error.message);
+          await supabaseAdmin
+            .from('users')
+            .update({ realBalance: supabaseAdmin.raw('COALESCE(realBalance,0) + ?', [commission]) })
+            .eq('id', user.referred_by);
+        }
+      } catch (refErr) {
+        console.error('❌ Referral processing error (non‑critical):', refErr);
+        // Deposit already approved – do not fail the request
+      }
+    }
 
     res.json({
       success: true,
-      message: `Deposit approved. ₦${deposit.amount} added.`,
-      deposit: { id: requestId, status: 'approved', amount: deposit.amount }
+      message: `Deposit approved. ₦${approvedDeposit.amount} added to ${user.username}.`,
+      deposit: {
+        id: requestId,
+        status: 'approved',
+        amount: approvedDeposit.amount
+      }
     });
   } catch (error) {
     console.error(error);
