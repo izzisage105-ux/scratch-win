@@ -9,12 +9,12 @@ require("dotenv").config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname, {
-  extensions: ['html', 'htm'],
-  setHeaders: (res, path) => {
-    if (path.endsWith('.html')) res.setHeader('Content-Type', 'text/html');
-  }
-}));
+
+// ========== STATIC FILES (PUBLIC FOLDER) ==========
+app.use(express.static(path.join(__dirname, 'public')));
+
+console.log('📁 Current directory:', __dirname);
+console.log('📄 Files in dir:', require('fs').readdirSync(__dirname));
 
 // ========== SUPABASE CLIENTS ==========
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -24,44 +24,30 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-// ========== AUTH MIDDLEWARE ==========
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.header("Authorization");
-  if (!authHeader) return res.status(401).json({ success: false, message: "No token" });
-  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-  try {
-    const secret = process.env.JWT_SECRET || "dev_secret_123";
-    const decoded = jwt.verify(token, secret);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).json({ success: false, message: "Invalid token" });
+// ========== REFERRAL CODE GENERATOR ==========
+function generateReferralCode(length = 6) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-};
+  return code;
+}
 
-// ========== ADMIN MIDDLEWARE ==========
-const adminMiddleware = async (req, res, next) => {
-  const authHeader = req.header("Authorization");
-  if (!authHeader) return res.status(401).json({ success: false, message: "No token" });
-  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-  try {
-    const secret = process.env.JWT_SECRET || "dev_secret_123";
-    const decoded = jwt.verify(token, secret);
-    // Get user from DB and check isAdmin
-    const { data: user, error } = await supabaseAdmin
+async function getUniqueReferralCode() {
+  let code;
+  let exists = true;
+  while (exists) {
+    code = generateReferralCode();
+    const { data } = await supabase
       .from('users')
-      .select('isAdmin, adminRole')
-      .eq('id', decoded.id)
-      .single();
-    if (error || !user || !user.isAdmin) {
-      return res.status(403).json({ success: false, message: "Admin only" });
-    }
-    req.admin = { ...decoded, role: user.adminRole };
-    next();
-  } catch (err) {
-    res.status(401).json({ success: false, message: "Invalid admin token" });
+      .select('id')
+      .eq('referral_code', code)
+      .maybeSingle();
+    exists = !!data;
   }
-};
+  return code;
+}
 
 // ========== GAME LOGIC ==========
 class GameLogic {
@@ -150,6 +136,44 @@ class GameLogic {
 
 const gameLogic = new GameLogic();
 
+// ========== AUTH MIDDLEWARE ==========
+const authMiddleware = (req, res, next) => {
+  const authHeader = req.header("Authorization");
+  if (!authHeader) return res.status(401).json({ success: false, message: "No token" });
+  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+  try {
+    const secret = process.env.JWT_SECRET || "dev_secret_123";
+    const decoded = jwt.verify(token, secret);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ success: false, message: "Invalid token" });
+  }
+};
+
+// ========== ADMIN MIDDLEWARE ==========
+const adminMiddleware = async (req, res, next) => {
+  const authHeader = req.header("Authorization");
+  if (!authHeader) return res.status(401).json({ success: false, message: "No token" });
+  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+  try {
+    const secret = process.env.JWT_SECRET || "dev_secret_123";
+    const decoded = jwt.verify(token, secret);
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('isAdmin, adminRole')
+      .eq('id', decoded.id)
+      .single();
+    if (error || !user || !user.isAdmin) {
+      return res.status(403).json({ success: false, message: "Admin only" });
+    }
+    req.admin = { ...decoded, role: user.adminRole };
+    next();
+  } catch (err) {
+    res.status(401).json({ success: false, message: "Invalid admin token" });
+  }
+};
+
 // ========== INIT ADMIN ACCOUNTS ==========
 async function initializeAdminAccounts() {
   const adminAccounts = [
@@ -159,7 +183,6 @@ async function initializeAdminAccounts() {
   ];
 
   for (const acc of adminAccounts) {
-    // Check if admin already exists
     const { data: existing } = await supabaseAdmin
       .from('users')
       .select('id')
@@ -201,17 +224,16 @@ async function initializeAdminAccounts() {
 // Call after server starts
 setTimeout(() => initializeAdminAccounts(), 1000);
 
-// ========== ROUTES ==========
+// ========== ROOT ROUTE ==========
 app.get("/", (req, res) => {
   res.json({ success: true, message: "Scratch & Win API", database: "Supabase" });
 });
 
-// REGISTER
+// ========== AUTH ROUTES ==========
 app.post("/auth/register", async (req, res) => {
   try {
     const { phone, username, password, referralCode } = req.body;
 
-    // Check if user exists
     const { data: existing } = await supabase
       .from('users')
       .select('id')
@@ -219,7 +241,6 @@ app.post("/auth/register", async (req, res) => {
       .maybeSingle();
     if (existing) return res.status(400).json({ success: false, message: "User exists" });
 
-    // Validate referral code if provided
     let referrer = null;
     if (referralCode) {
       const { data: refUser } = await supabase
@@ -233,14 +254,11 @@ app.post("/auth/register", async (req, res) => {
       referrer = refUser;
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Generate unique referral code for new user
     const newReferralCode = await getUniqueReferralCode();
-
     const id = Date.now().toString();
+
     const user = {
       id,
       phone,
@@ -270,7 +288,6 @@ app.post("/auth/register", async (req, res) => {
     const { error } = await supabase.from('users').insert(user);
     if (error) throw error;
 
-    // If referred, create entry in referrals table
     if (referrer) {
       const referralRecord = {
         id: Date.now().toString() + '-ref',
@@ -308,7 +325,6 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-// LOGIN
 app.post("/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -321,14 +337,19 @@ app.post("/auth/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
     const token = jwt.sign({ id: user.id, username }, process.env.JWT_SECRET || "dev_secret_123", { expiresIn: "30d" });
-    res.json({ success: true, message: "Logged in", token, user: { id: user.id, username, balance: user.realBalance, demoBalance: user.demoBalance } });
+    res.json({
+      success: true,
+      message: "Logged in",
+      token,
+      user: { id: user.id, username, balance: user.realBalance, demoBalance: user.demoBalance }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-// GET USER INFO
+// ========== USER ROUTES ==========
 app.get("/user/me", authMiddleware, async (req, res) => {
   try {
     const { data: user, error } = await supabase
@@ -356,57 +377,6 @@ app.get("/user/me", authMiddleware, async (req, res) => {
   }
 });
 
-// CHECK TIER
-app.get("/deposit/has-tier", authMiddleware, async (req, res) => {
-  try {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('depositTier, demoBalance')
-      .eq('id', req.user.id)
-      .single();
-    if (error || !user) return res.status(404).json({ success: false, message: "User not found" });
-    res.json({ success: true, hasTier: !!user.depositTier, tier: user.depositTier, demoBalance: user.demoBalance || 46800 });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// SELECT TIER
-app.post("/deposit/select-tier", authMiddleware, async (req, res) => {
-  try {
-    const { tier } = req.body;
-    const bonuses = { 1000: 50000, 5000: 250000, 10000: 500000 };
-    if (![1000, 5000, 10000].includes(tier)) return res.status(400).json({ success: false, message: "Invalid tier" });
-
-    // Check if tier already selected
-    const { data: user, error: fetchError } = await supabase
-      .from('users')
-      .select('depositTier')
-      .eq('id', req.user.id)
-      .single();
-    if (fetchError || !user) return res.status(404).json({ success: false, message: "User not found" });
-    if (user.depositTier) return res.status(400).json({ success: false, message: "Tier already selected" });
-
-    const updates = {
-      depositTier: tier,
-      demoBonus: bonuses[tier],
-      demoBalance: bonuses[tier]
-    };
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', req.user.id);
-    if (error) throw error;
-
-    res.json({ success: true, message: "Tier selected", demoBonus: bonuses[tier], currentBalance: bonuses[tier] });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// SWITCH BALANCE MODE
 app.post("/user/switch-balance-mode", authMiddleware, async (req, res) => {
   try {
     const { mode } = req.body;
@@ -418,7 +388,6 @@ app.post("/user/switch-balance-mode", authMiddleware, async (req, res) => {
       .eq('id', req.user.id);
     if (error) throw error;
 
-    // Get updated balance
     const { data: user } = await supabase
       .from('users')
       .select('demoBalance, realBalance')
@@ -432,13 +401,30 @@ app.post("/user/switch-balance-mode", authMiddleware, async (req, res) => {
   }
 });
 
-// PLAY GAME
+app.post("/user/save-bank-details", authMiddleware, async (req, res) => {
+  try {
+    const { bankName, accountName, accountNumber } = req.body;
+    if (!bankName || !accountName || !accountNumber) {
+      return res.status(400).json({ success: false, message: "All details required" });
+    }
+    const { error } = await supabase
+      .from('users')
+      .update({ bankName, accountName, accountNumber })
+      .eq('id', req.user.id);
+    if (error) throw error;
+    res.json({ success: true, message: "Bank details saved" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ========== GAME ROUTES ==========
 app.post("/game/play", authMiddleware, async (req, res) => {
   try {
     const { stake, mode = 'demo' } = req.body;
     if (![150, 300, 500, 1000].includes(stake)) return res.status(400).json({ success: false, message: "Invalid stake" });
 
-    // Get user
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
@@ -454,7 +440,6 @@ app.post("/game/play", authMiddleware, async (req, res) => {
     grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
     const result = gameLogic.checkForWin(grid);
 
-    // Prepare updates
     let updates = {};
     let gameRecord = {
       id: Date.now().toString(),
@@ -487,14 +472,12 @@ app.post("/game/play", authMiddleware, async (req, res) => {
     updates.gamesPlayed = (user.gamesPlayed || 0) + 1;
     updates.lastGamePlayed = new Date().toISOString();
 
-    // Update user
     const { error: updateError } = await supabase
       .from('users')
       .update(updates)
       .eq('id', user.id);
     if (updateError) throw updateError;
 
-    // Get updated balances
     const { data: updatedUser } = await supabase
       .from('users')
       .select('demoBalance, realBalance')
@@ -502,7 +485,6 @@ app.post("/game/play", authMiddleware, async (req, res) => {
       .single();
 
     gameRecord.newBalance = mode === 'demo' ? updatedUser.demoBalance : updatedUser.realBalance;
-    // Save game
     const { error: gameError } = await supabase.from('games').insert(gameRecord);
     if (gameError) throw gameError;
 
@@ -521,7 +503,6 @@ app.post("/game/play", authMiddleware, async (req, res) => {
   }
 });
 
-// GAME HISTORY
 app.get("/user/game-history", authMiddleware, async (req, res) => {
   try {
     const { data: games, error } = await supabase
@@ -551,26 +532,107 @@ app.get("/user/game-history", authMiddleware, async (req, res) => {
   }
 });
 
-// SAVE BANK DETAILS
-app.post("/user/save-bank-details", authMiddleware, async (req, res) => {
+// ========== DEPOSIT ROUTES ==========
+app.get("/deposit/has-tier", authMiddleware, async (req, res) => {
   try {
-    const { bankName, accountName, accountNumber } = req.body;
-    if (!bankName || !accountName || !accountNumber) return res.status(400).json({ success: false, message: "All details required" });
-
-    const { error } = await supabase
+    const { data: user, error } = await supabase
       .from('users')
-      .update({ bankName, accountName, accountNumber })
-      .eq('id', req.user.id);
-    if (error) throw error;
-
-    res.json({ success: true, message: "Bank details saved" });
+      .select('depositTier, demoBalance')
+      .eq('id', req.user.id)
+      .single();
+    if (error || !user) return res.status(404).json({ success: false, message: "User not found" });
+    res.json({ success: true, hasTier: !!user.depositTier, tier: user.depositTier, demoBalance: user.demoBalance || 46800 });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-// WITHDRAWAL REQUIREMENTS
+app.post("/deposit/select-tier", authMiddleware, async (req, res) => {
+  try {
+    const { tier } = req.body;
+    const bonuses = { 1000: 50000, 5000: 250000, 10000: 500000 };
+    if (![1000, 5000, 10000].includes(tier)) return res.status(400).json({ success: false, message: "Invalid tier" });
+
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('depositTier')
+      .eq('id', req.user.id)
+      .single();
+    if (fetchError || !user) return res.status(404).json({ success: false, message: "User not found" });
+    if (user.depositTier) return res.status(400).json({ success: false, message: "Tier already selected" });
+
+    const updates = {
+      depositTier: tier,
+      demoBonus: bonuses[tier],
+      demoBalance: bonuses[tier]
+    };
+    const { error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', req.user.id);
+    if (error) throw error;
+
+    res.json({ success: true, message: "Tier selected", demoBonus: bonuses[tier], currentBalance: bonuses[tier] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+app.post("/deposit/request", authMiddleware, async (req, res) => {
+  try {
+    const { amount, paymentProof } = req.body;
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('username')
+      .eq('id', req.user.id)
+      .single();
+    if (userError || !user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const deposit = {
+      id: Date.now().toString(),
+      userId: req.user.id,
+      username: user.username,
+      amount: parseFloat(amount),
+      paymentProof: paymentProof || "",
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      approvedAt: null,
+      adminNotes: ""
+    };
+
+    const { error } = await supabase.from('deposits').insert(deposit);
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: "Deposit request submitted. Admin will review.",
+      requestId: deposit.id,
+      status: 'pending'
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+app.get("/user/deposit-history", authMiddleware, async (req, res) => {
+  try {
+    const { data: deposits, error } = await supabase
+      .from('deposits')
+      .select('*')
+      .eq('userId', req.user.id)
+      .order('createdAt', { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, deposits });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ========== WITHDRAWAL ROUTES ==========
 app.get("/withdrawal/requirements", authMiddleware, async (req, res) => {
   try {
     const { data: user, error } = await supabase
@@ -611,7 +673,6 @@ app.get("/withdrawal/requirements", authMiddleware, async (req, res) => {
   }
 });
 
-// USER WITHDRAWAL REQUEST
 app.post("/withdrawal/request", authMiddleware, async (req, res) => {
   try {
     const { amount } = req.body;
@@ -622,7 +683,6 @@ app.post("/withdrawal/request", authMiddleware, async (req, res) => {
       .single();
     if (userError || !user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // Validation
     if (!user.bankName || !user.accountNumber) {
       return res.status(400).json({ success: false, message: "Save bank details first" });
     }
@@ -636,7 +696,6 @@ app.post("/withdrawal/request", authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: `Amount exceeds your balance of ₦${user.realBalance.toLocaleString()}` });
     }
 
-    // Check pending withdrawals
     const { data: pending } = await supabase
       .from('withdrawals')
       .select('id')
@@ -674,7 +733,6 @@ app.post("/withdrawal/request", authMiddleware, async (req, res) => {
   }
 });
 
-// USER WITHDRAWAL HISTORY
 app.get("/user/withdrawal-history", authMiddleware, async (req, res) => {
   try {
     const { data: withdrawals, error } = await supabase
@@ -683,7 +741,6 @@ app.get("/user/withdrawal-history", authMiddleware, async (req, res) => {
       .eq('userId', req.user.id)
       .order('createdAt', { ascending: false });
     if (error) throw error;
-
     res.json({ success: true, withdrawals });
   } catch (error) {
     console.error(error);
@@ -691,37 +748,35 @@ app.get("/user/withdrawal-history", authMiddleware, async (req, res) => {
   }
 });
 
-// USER DEPOSIT REQUEST
-app.post("/deposit/request", authMiddleware, async (req, res) => {
+// ========== REFERRAL ROUTES ==========
+app.get("/user/referral-info", authMiddleware, async (req, res) => {
   try {
-    const { amount, paymentProof } = req.body;
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('username')
+      .select('referral_code, total_referral_deposits, referral_earnings')
       .eq('id', req.user.id)
       .single();
-    if (userError || !user) return res.status(404).json({ success: false, message: "User not found" });
+    if (userError) throw userError;
 
-    const deposit = {
-      id: Date.now().toString(),
-      userId: req.user.id,
-      username: user.username,
-      amount: parseFloat(amount),
-      paymentProof: paymentProof || "",
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      approvedAt: null,
-      adminNotes: ""
-    };
-
-    const { error } = await supabase.from('deposits').insert(deposit);
-    if (error) throw error;
+    const { data: referrals, error: refError } = await supabase
+      .from('referrals')
+      .select('referred_username, referred_at, total_deposited, commission_earned')
+      .eq('referrer_id', req.user.id)
+      .order('referred_at', { ascending: false });
+    if (refError) throw refError;
 
     res.json({
       success: true,
-      message: "Deposit request submitted. Admin will review.",
-      requestId: deposit.id,
-      status: 'pending'
+      referralCode: user.referral_code,
+      totalReferred: referrals.length,
+      totalDepositsFromReferrals: user.total_referral_deposits || 0,
+      totalEarnings: user.referral_earnings || 0,
+      referrals: referrals.map(r => ({
+        username: r.referred_username,
+        date: r.referred_at,
+        deposited: r.total_deposited,
+        earned: r.commission_earned
+      }))
     });
   } catch (error) {
     console.error(error);
@@ -729,24 +784,7 @@ app.post("/deposit/request", authMiddleware, async (req, res) => {
   }
 });
 
-// USER DEPOSIT HISTORY
-app.get("/user/deposit-history", authMiddleware, async (req, res) => {
-  try {
-    const { data: deposits, error } = await supabase
-      .from('deposits')
-      .select('*')
-      .eq('userId', req.user.id)
-      .order('createdAt', { ascending: false });
-    if (error) throw error;
-
-    res.json({ success: true, deposits });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// ========== ADMIN ROUTES (use supabaseAdmin) ==========
+// ========== ADMIN ROUTES ==========
 app.post("/api/admin/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -779,7 +817,6 @@ app.post("/api/admin/login", async (req, res) => {
   }
 });
 
-// GET ALL USERS (admin)
 app.get("/api/admin/users", adminMiddleware, async (req, res) => {
   try {
     const { data: users, error } = await supabaseAdmin
@@ -798,7 +835,6 @@ app.get("/api/admin/users", adminMiddleware, async (req, res) => {
   }
 });
 
-// ELIGIBLE USERS
 app.get("/api/admin/eligible-users", adminMiddleware, async (req, res) => {
   try {
     const { data: users, error } = await supabaseAdmin
@@ -838,7 +874,6 @@ app.get("/api/admin/eligible-users", adminMiddleware, async (req, res) => {
   }
 });
 
-// UNLOCK WITHDRAWAL
 app.post("/api/admin/unlock-withdrawal/:userId", adminMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -865,7 +900,6 @@ app.post("/api/admin/unlock-withdrawal/:userId", adminMiddleware, async (req, re
   }
 });
 
-// LOCK WITHDRAWAL
 app.post("/api/admin/lock-withdrawal/:userId", adminMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -892,7 +926,6 @@ app.post("/api/admin/lock-withdrawal/:userId", adminMiddleware, async (req, res)
   }
 });
 
-// GET WITHDRAWAL REQUESTS
 app.get("/api/admin/withdrawal-requests", adminMiddleware, async (req, res) => {
   try {
     const { data: requests, error } = await supabaseAdmin
@@ -924,13 +957,11 @@ app.get("/api/admin/withdrawal-requests", adminMiddleware, async (req, res) => {
   }
 });
 
-// APPROVE WITHDRAWAL
 app.post("/api/admin/approve-withdrawal/:requestId", adminMiddleware, async (req, res) => {
   try {
     const { requestId } = req.params;
     const { notes } = req.body;
 
-    // Get withdrawal with user
     const { data: withdrawal, error: fetchError } = await supabaseAdmin
       .from('withdrawals')
       .select('*, users(realBalance, username)')
@@ -946,14 +977,12 @@ app.post("/api/admin/approve-withdrawal/:requestId", adminMiddleware, async (req
       return res.status(400).json({ success: false, message: "User has insufficient balance" });
     }
 
-    // Deduct balance
     const { error: deductError } = await supabaseAdmin
       .from('users')
       .update({ realBalance: userBalance - withdrawal.amount })
       .eq('id', withdrawal.userId);
     if (deductError) throw deductError;
 
-    // Update withdrawal
     const { error: updateError } = await supabaseAdmin
       .from('withdrawals')
       .update({
@@ -964,7 +993,6 @@ app.post("/api/admin/approve-withdrawal/:requestId", adminMiddleware, async (req
       .eq('id', requestId);
     if (updateError) throw updateError;
 
-    // Get updated user balance
     const { data: updatedUser } = await supabaseAdmin
       .from('users')
       .select('realBalance')
@@ -987,7 +1015,6 @@ app.post("/api/admin/approve-withdrawal/:requestId", adminMiddleware, async (req
   }
 });
 
-// REJECT WITHDRAWAL
 app.post("/api/admin/reject-withdrawal/:requestId", adminMiddleware, async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -997,7 +1024,6 @@ app.post("/api/admin/reject-withdrawal/:requestId", adminMiddleware, async (req,
       .update({ status: 'rejected', notes: notes || "Rejected by admin" })
       .eq('id', requestId);
     if (error) throw error;
-
     res.json({ success: true, message: "Withdrawal rejected", request: { id: requestId, status: 'rejected' } });
   } catch (error) {
     console.error(error);
@@ -1005,7 +1031,6 @@ app.post("/api/admin/reject-withdrawal/:requestId", adminMiddleware, async (req,
   }
 });
 
-// MARK PAID
 app.post("/api/admin/mark-paid/:requestId", adminMiddleware, async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -1038,7 +1063,6 @@ app.post("/api/admin/mark-paid/:requestId", adminMiddleware, async (req, res) =>
   }
 });
 
-// DEPOSIT REQUESTS
 app.get("/api/admin/deposit-requests", adminMiddleware, async (req, res) => {
   try {
     const { data: deposits, error } = await supabaseAdmin
@@ -1053,13 +1077,11 @@ app.get("/api/admin/deposit-requests", adminMiddleware, async (req, res) => {
   }
 });
 
-// APPROVE DEPOSIT (with referral commission)
 app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, res) => {
   try {
     const { requestId } = req.params;
     const { notes } = req.body;
 
-    // Get deposit request
     const { data: deposit, error: fetchError } = await supabaseAdmin
       .from('deposits')
       .select('*')
@@ -1067,7 +1089,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
       .single();
     if (fetchError || !deposit) return res.status(404).json({ success: false, message: "Deposit not found" });
 
-    // Get user to update balance and check if referred
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -1075,26 +1096,22 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
       .single();
     if (userError) throw userError;
 
-    // Update user's real balance
     const newBalance = (user.realBalance || 0) + deposit.amount;
     await supabaseAdmin
       .from('users')
       .update({ realBalance: newBalance })
       .eq('id', deposit.userId);
 
-    // ===== REFERRAL BONUS =====
     if (user.referred_by) {
-      const commissionRate = 0.05; // 5% commission
+      const commissionRate = 0.05;
       const commission = deposit.amount * commissionRate;
 
-      // Update referrer's total_referral_deposits and earnings
       await supabaseAdmin.rpc('increment_referral_stats', {
         referrer_id: user.referred_by,
         deposit_amount: deposit.amount,
         commission_amount: commission
       });
 
-      // Also update the specific referral record
       await supabaseAdmin
         .from('referrals')
         .update({
@@ -1103,14 +1120,12 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
         })
         .eq('referred_id', deposit.userId);
 
-      // Add commission to referrer's real balance
       await supabaseAdmin.rpc('add_to_user_balance', {
         user_id: user.referred_by,
         amount: commission
       });
     }
 
-    // Update deposit status
     await supabaseAdmin
       .from('deposits')
       .update({
@@ -1131,7 +1146,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
   }
 });
 
-// REJECT DEPOSIT
 app.post("/api/admin/reject-deposit/:requestId", adminMiddleware, async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -1148,82 +1162,14 @@ app.post("/api/admin/reject-deposit/:requestId", adminMiddleware, async (req, re
   }
 });
 
-// ========== REFERRAL CODE GENERATOR ==========
-function generateReferralCode(length = 6) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < length; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-async function getUniqueReferralCode() {
-  let code;
-  let exists = true;
-  while (exists) {
-    code = generateReferralCode();
-    const { data } = await supabase
-      .from('users')
-      .select('id')
-      .eq('referral_code', code)
-      .maybeSingle();
-    exists = !!data;
-  }
-  return code;
-}
-
-// ========== REFERRAL ENDPOINTS ==========
-
-// Get user's own referral code and stats
-app.get("/user/referral-info", authMiddleware, async (req, res) => {
-  try {
-    // Get user's referral code and total referral deposits
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('referral_code, total_referral_deposits, referral_earnings')
-      .eq('id', req.user.id)
-      .single();
-    if (userError) throw userError;
-
-    // Get count of referred users and list them
-    const { data: referrals, error: refError } = await supabase
-      .from('referrals')
-      .select('referred_username, referred_at, total_deposited, commission_earned')
-      .eq('referrer_id', req.user.id)
-      .order('referred_at', { ascending: false });
-    if (refError) throw refError;
-
-    res.json({
-      success: true,
-      referralCode: user.referral_code,
-      totalReferred: referrals.length,
-      totalDepositsFromReferrals: user.total_referral_deposits || 0,
-      totalEarnings: user.referral_earnings || 0,
-      referrals: referrals.map(r => ({
-        username: r.referred_username,
-        date: r.referred_at,
-        deposited: r.total_deposited,
-        earned: r.commission_earned
-      }))
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// Admin: get all referral stats
 app.get("/api/admin/referral-stats", adminMiddleware, async (req, res) => {
   try {
-    // Get all users with referral codes and counts
     const { data: users, error: usersError } = await supabaseAdmin
       .from('users')
       .select('id, username, referral_code, total_referral_deposits, referral_earnings, created_at')
       .not('referral_code', 'is', null);
     if (usersError) throw usersError;
 
-    // For each user, get count of referrals and total deposited
     const stats = await Promise.all(users.map(async (user) => {
       const { count, error: countError } = await supabaseAdmin
         .from('referrals')
@@ -1244,24 +1190,17 @@ app.get("/api/admin/referral-stats", adminMiddleware, async (req, res) => {
   }
 });
 
-// Admin: delete user account (and all related data)
 app.delete("/api/admin/users/:userId", adminMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
-
-    // Prevent admin from deleting themselves
     if (userId === req.admin.id) {
       return res.status(400).json({ success: false, message: "Cannot delete your own admin account" });
     }
-
-    // Delete user – foreign key constraints will cascade to games, withdrawals, deposits, referrals
     const { error } = await supabaseAdmin
       .from('users')
       .delete()
       .eq('id', userId);
-
     if (error) throw error;
-
     res.json({ success: true, message: "User deleted successfully" });
   } catch (error) {
     console.error(error);

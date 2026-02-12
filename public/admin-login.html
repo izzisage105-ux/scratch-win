@@ -73,7 +73,7 @@
     </div>
 
     <script>
-        const API = "http://localhost:5000";
+        const API = window.location.origin;
         
         async function adminLogin() {
             const username = document.getElementById('username').value.trim();
