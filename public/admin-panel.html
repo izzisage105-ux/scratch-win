@@ -136,6 +136,7 @@
         <div id="referrals-tab" class="content" style="display:none;">
             <h2>🔗 Referral Statistics</h2>
             <div class="section">
+                <p>All users with referral codes and their performance.</p>
                 <table id="referrals-table">
                     <thead>
                         <tr>
@@ -404,12 +405,14 @@
                             tbody.appendChild(row);
                         });
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ccc;">No referral data found</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ccc;">No referral data found. Run the SQL to generate codes for existing users.</td></tr>`;
                     }
+                } else {
+                    alert("Failed to load referral stats: " + (data.message || "Unknown error"));
                 }
             } catch (error) {
                 console.error("Load referral stats error:", error);
-                alert("Failed to load referral statistics");
+                alert("Failed to load referral statistics. Check console for details.");
             }
         }
         
