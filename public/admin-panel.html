@@ -7,7 +7,7 @@
         body { background: #0a1929; color: white; font-family: Arial; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .header { background: #1a0033; padding: 20px; border-bottom: 3px solid #d4af37; position: relative; }
-        .tabs { display: flex; background: #001e3c; margin: 20px 0; }
+        .tabs { display: flex; background: #001e3c; margin: 20px 0; flex-wrap: wrap; }
         .tab { padding: 15px 30px; cursor: pointer; border-right: 1px solid #334; }
         .tab.active { background: #0056b3; }
         .content { background: #001e3c; padding: 20px; border-radius: 8px; }
@@ -15,17 +15,20 @@
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334; }
         th { background: #1a0033; }
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 2px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 12px; }
         .btn-approve { background: #28a745; color: white; }
         .btn-reject { background: #dc3545; color: white; }
         .btn-unlock { background: #17a2b8; color: white; }
         .btn-lock { background: #6c757d; color: white; }
+        .btn-delete { background: #dc3545; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .referral-code { font-family: monospace; font-weight: bold; color: #d4af37; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>👑 ADMIN PANEL - Scratch & Win</h1>
-        <p>Manual Withdrawal Approval System</p>
+        <p>Manual Withdrawal & Referral Management</p>
         <button id="logout-btn" style="position:absolute; right:20px; top:20px; background:#dc3545; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer;">
             🚪 Logout
         </button>
@@ -37,23 +40,26 @@
             <div class="tab" onclick="showTab('deposits')">💰 Deposits</div>
             <div class="tab" onclick="showTab('withdrawals')">💸 Withdrawals</div>
             <div class="tab" onclick="showTab('unlock')">🔓 Unlock</div>
+            <div class="tab" onclick="showTab('referrals')">🔗 Referrals</div>
             <div class="tab" onclick="showTab('game')">🎮 Game</div>
         </div>
         
+        <!-- USERS TAB -->
         <div id="users-tab" class="content">
             <h2>👥 User Management</h2>
             <div class="section">
                 <table id="users-table">
                     <thead>
                         <tr>
-                            <th>ID</th><th>Username</th><th>Tier</th><th>Real Balance</th>
-                            <th>Staked</th><th>Won</th><th>Withdrawal Status</th><th>Actions</th>
-
-                            <td>
-  <button class="btn btn-reject" onclick="deleteUser('${user.id}')" ${user.isAdmin ? 'disabled' : ''}>
-    🗑️ Delete
-  </button>
-</td>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Referral Code</th>
+                            <th>Tier</th>
+                            <th>Real Balance</th>
+                            <th>Staked</th>
+                            <th>Won</th>
+                            <th>Withdrawal</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="users-list"></tbody>
@@ -61,14 +67,20 @@
             </div>
         </div>
         
+        <!-- DEPOSITS TAB -->
         <div id="deposits-tab" class="content" style="display:none;">
             <h2>💰 Deposit Requests</h2>
             <div class="section">
                 <table id="deposits-table">
                     <thead>
                         <tr>
-                            <th>ID</th><th>User</th><th>Amount</th><th>Proof</th>
-                            <th>Status</th><th>Requested</th><th>Actions</th>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Proof</th>
+                            <th>Status</th>
+                            <th>Requested</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="deposits-list"></tbody>
@@ -76,27 +88,29 @@
             </div>
         </div>
         
+        <!-- WITHDRAWALS TAB -->
         <div id="withdrawals-tab" class="content" style="display:none;">
             <h2>💸 Withdrawal Requests</h2>
             <div class="section">
                 <table id="withdrawals-table">
                     <thead>
                         <tr>
-    <th>ID</th>
-    <th>User</th>
-    <th>Amount</th>
-    <th>Bank Details</th>
-    <th>User Balance</th> <!-- ADD THIS COLUMN -->
-    <th>Status</th>
-    <th>Requested</th>
-    <th>Actions</th>
-</tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Bank Details</th>
+                            <th>User Balance</th>
+                            <th>Status</th>
+                            <th>Requested</th>
+                            <th>Actions</th>
+                        </tr>
                     </thead>
                     <tbody id="withdrawals-list"></tbody>
                 </table>
             </div>
         </div>
         
+        <!-- UNLOCK TAB -->
         <div id="unlock-tab" class="content" style="display:none;">
             <h2>🔓 Manual Withdrawal Unlock</h2>
             <div class="section">
@@ -104,8 +118,13 @@
                 <table id="unlock-table">
                     <thead>
                         <tr>
-                            <th>User</th><th>Tier</th><th>Staked</th><th>Won</th>
-                            <th>Requirements Met?</th><th>Current Status</th><th>Action</th>
+                            <th>User</th>
+                            <th>Tier</th>
+                            <th>Staked</th>
+                            <th>Won</th>
+                            <th>Requirements Met?</th>
+                            <th>Current Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="unlock-list"></tbody>
@@ -113,6 +132,27 @@
             </div>
         </div>
         
+        <!-- REFERRALS TAB -->
+        <div id="referrals-tab" class="content" style="display:none;">
+            <h2>🔗 Referral Statistics</h2>
+            <div class="section">
+                <table id="referrals-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Referral Code</th>
+                            <th>People Referred</th>
+                            <th>Total Deposits (₦)</th>
+                            <th>Commission Earned (₦)</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody id="referrals-list"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- GAME CONTROLS TAB -->
         <div id="game-tab" class="content" style="display:none;">
             <h2>🎮 Game Controls</h2>
             <div class="section">
@@ -124,431 +164,425 @@
     </div>
 
     <script>
-   const API = window.location.origin;
-    let adminToken = localStorage.getItem("adminToken");
-    
-    if (!adminToken) {
-        window.location.href = "admin-login.html";
-    }
-    
-    const adminHeaders = {
-        "Authorization": `Bearer ${adminToken}`,
-        "Content-Type": "application/json"
-    };
-    
-    // Logout
-    document.getElementById('logout-btn').onclick = function() {
-        localStorage.removeItem("adminToken");
-        window.location.href = "admin-login.html";
-    };
-    
-    // Tab management
-    function showTab(tabName) {
-        document.querySelectorAll('.content').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        const API = window.location.origin;
+        let adminToken = localStorage.getItem("adminToken");
         
-        document.getElementById(tabName + '-tab').style.display = 'block';
-        event.target.classList.add('active');
-        
-        switch(tabName) {
-            case 'users': loadUsers(); break;
-            case 'deposits': loadDeposits(); break;
-            case 'withdrawals': loadWithdrawals(); break;
-            case 'unlock': loadEligibleUsers(); break;
+        if (!adminToken) {
+            window.location.href = "admin-login.html";
         }
-    }
-    
-    // Load users
-    async function loadUsers() {
-        try {
-            const response = await fetch(API + "/api/admin/users", { headers: adminHeaders });
-            const data = await response.json();
+        
+        const adminHeaders = {
+            "Authorization": `Bearer ${adminToken}`,
+            "Content-Type": "application/json"
+        };
+        
+        // Logout
+        document.getElementById('logout-btn').onclick = function() {
+            localStorage.removeItem("adminToken");
+            window.location.href = "admin-login.html";
+        };
+        
+        // ========== TAB MANAGEMENT ==========
+        function showTab(tabName) {
+            document.querySelectorAll('.content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
             
-            if (data.success) {
-                const tbody = document.getElementById('users-list');
-                tbody.innerHTML = '';
-                
-                data.users.forEach(user => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${user.id.substring(0, 8)}...</td>
-                        <td>${user.username}</td>
-                        <td>₦${(user.depositTier || 1000).toLocaleString()}</td>
-                        <td>₦${(user.realBalance || 0).toLocaleString()}</td>
-                        <td>₦${(user.totalStakedReal || 0).toLocaleString()}</td>
-                        <td>₦${(user.totalWonReal || 0).toLocaleString()}</td>
-                        <td>${user.withdrawalUnlocked ? '🔓 Unlocked' : '🔒 Locked'}</td>
-                        <td>
-                            <button class="btn ${user.withdrawalUnlocked ? 'btn-lock' : 'btn-unlock'}" 
-                                    onclick="${user.withdrawalUnlocked ? 'lockUser' : 'unlockUser'}('${user.id}')">
-                                ${user.withdrawalUnlocked ? '🔒 Lock' : '🔓 Unlock'}
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            event.target.classList.add('active');
+            
+            switch(tabName) {
+                case 'users': loadUsers(); break;
+                case 'deposits': loadDeposits(); break;
+                case 'withdrawals': loadWithdrawals(); break;
+                case 'unlock': loadEligibleUsers(); break;
+                case 'referrals': loadReferralStats(); break;
             }
-        } catch (error) {
-            console.error("Load users error:", error);
-            alert("Failed to load users");
         }
-    }
-    
-    // Load deposits
-    async function loadDeposits() {
-        try {
-            const response = await fetch(API + "/api/admin/deposit-requests", { headers: adminHeaders });
-            const data = await response.json();
-            
-            if (data.success) {
-                const tbody = document.getElementById('deposits-list');
-                tbody.innerHTML = '';
+        
+        // ========== USERS ==========
+        async function loadUsers() {
+            try {
+                const response = await fetch(API + "/api/admin/users", { headers: adminHeaders });
+                const data = await response.json();
                 
-                data.requests.forEach(deposit => {
-                    const statusColors = {
-                        'pending': '#ffc107',
-                        'approved': '#28a745',
-                        'rejected': '#dc3545'
-                    };
+                if (data.success) {
+                    const tbody = document.getElementById('users-list');
+                    tbody.innerHTML = '';
                     
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${deposit.id.substring(0, 8)}...</td>
-                        <td>${deposit.username}</td>
-                        <td>₦${deposit.amount.toLocaleString()}</td>
-                        <td>${deposit.paymentProof ? '📎 Provided' : 'No proof'}</td>
-                        <td style="color: ${statusColors[deposit.status]}">
-                            ${deposit.status.toUpperCase()}
-                        </td>
-                        <td>${new Date(deposit.createdAt).toLocaleString()}</td>
-                        <td>
-                            ${deposit.status === 'pending' ? `
-                                <button class="btn btn-approve" onclick="approveDeposit('${deposit.id}')">✅ Approve</button>
-                                <button class="btn btn-reject" onclick="rejectDeposit('${deposit.id}')">❌ Reject</button>
-                            ` : 'No actions'}
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+                    data.users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.id.substring(0, 8)}...</td>
+                            <td>${user.username}</td>
+                            <td class="referral-code">${user.referral_code || '—'}</td>
+                            <td>₦${(user.depositTier || 1000).toLocaleString()}</td>
+                            <td>₦${(user.realBalance || 0).toLocaleString()}</td>
+                            <td>₦${(user.totalStakedReal || 0).toLocaleString()}</td>
+                            <td>₦${(user.totalWonReal || 0).toLocaleString()}</td>
+                            <td>${user.withdrawalUnlocked ? '🔓 Unlocked' : '🔒 Locked'}</td>
+                            <td>
+                                <button class="btn ${user.withdrawalUnlocked ? 'btn-lock' : 'btn-unlock'}" 
+                                        onclick="${user.withdrawalUnlocked ? 'lockUser' : 'unlockUser'}('${user.id}')">
+                                    ${user.withdrawalUnlocked ? '🔒 Lock' : '🔓 Unlock'}
+                                </button>
+                                <button class="btn btn-delete" 
+                                        onclick="deleteUser('${user.id}')"
+                                        ${user.isAdmin ? 'disabled title="Cannot delete admin"' : ''}>
+                                    🗑️ Delete
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error("Load users error:", error);
+                alert("Failed to load users");
             }
-        } catch (error) {
-            console.error("Load deposits error:", error);
-            alert("Failed to load deposits");
-        }
-    }
-    
-    // Load withdrawals
-    // In admin-panel.html, replace the loadWithdrawals function:
-async function loadWithdrawals() {
-    try {
-        const response = await fetch(API + "/api/admin/withdrawal-requests", {
-            headers: adminHeaders
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
         }
         
-        const data = await response.json();
-        console.log("Withdrawals data:", data); // Debug log
-        
-        if (data.success) {
-            const tbody = document.getElementById('withdrawals-list');
-            tbody.innerHTML = '';
-            
-            if (data.requests && data.requests.length > 0) {
-                data.requests.forEach(request => {
-                    const statusColors = {
-                        'pending': '#ffc107',
-                        'approved': '#28a745',
-                        'rejected': '#dc3545',
-                        'paid': '#17a2b8'
-                    };
-                    
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-    <td>${request.requestId ? request.requestId.substring(0, 8) : 'N/A'}...</td>
-    <td>${request.username || 'Unknown'}</td>
-    <td>₦${(request.amount || 0).toLocaleString()}</td>
-    <td>${request.bankName || ''} - ${request.accountNumber || ''}</td>
-    <td style="color: ${request.userBalance < request.amount ? '#ff6b6b' : '#28a745'}">
-        ₦${(request.userBalance || 0).toLocaleString()}
-    </td>
-    <td style="color: ${statusColors[request.status] || '#000'}">
-        ${(request.status || 'pending').toUpperCase()}
-    </td>
-    <td>${new Date(request.requestedAt || Date.now()).toLocaleString()}</td>
-    <td>
-        ${request.status === 'pending' ? `
-            <button class="btn btn-approve" onclick="approveWithdrawal('${request.requestId || request.id}')">✅ Approve</button>
-            <button class="btn btn-reject" onclick="rejectWithdrawal('${request.requestId || request.id}')">❌ Reject</button>
-        ` : request.status === 'approved' ? `
-            <button class="btn btn-unlock" onclick="markPaid('${request.requestId || request.id}')">💰 Mark Paid</button>
-        ` : 'No actions'}
-    </td>
-`;
-                    tbody.appendChild(row);
-                });
-            } else {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ccc;">No withdrawal requests found</td></tr>`;
-            }
-        } else {
-            alert("Failed to load withdrawals: " + (data.message || "Unknown error"));
-        }
-    } catch (error) {
-        console.error("🔥 Load withdrawals error:", error);
-        alert("Failed to load withdrawals. Check console for details.");
-        
-        // Show empty state
-        const tbody = document.getElementById('withdrawals-list');
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ff6b6b;">Error loading withdrawals</td></tr>`;
-    }
-}
-    
-    // Load eligible users
-    async function loadEligibleUsers() {
-        try {
-            const response = await fetch(API + "/api/admin/eligible-users", { headers: adminHeaders });
-            const data = await response.json();
-            
-            if (data.success) {
-                const tbody = document.getElementById('unlock-list');
-                tbody.innerHTML = '';
+        // ========== DEPOSITS ==========
+        async function loadDeposits() {
+            try {
+                const response = await fetch(API + "/api/admin/deposit-requests", { headers: adminHeaders });
+                const data = await response.json();
                 
-                data.users.forEach(user => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${user.username}</td>
-                        <td>₦${user.tier.toLocaleString()}</td>
-                        <td>₦${user.staked.toLocaleString()} / ₦${user.stakeTarget.toLocaleString()}</td>
-                        <td>₦${user.won.toLocaleString()} / ₦${user.winTarget.toLocaleString()}</td>
-                        <td>✅ YES</td>
-                        <td>${user.withdrawalUnlocked ? '🔓 Unlocked' : '🔒 Locked'}</td>
-                        <td>
-                            ${!user.withdrawalUnlocked ? 
-                                `<button class="btn btn-approve" onclick="unlockUser('${user.id}')">🔓 Unlock</button>` :
-                                `<button class="btn btn-reject" onclick="lockUser('${user.id}')">🔒 Lock</button>`
-                            }
-                        </td>
-                    `;
-                    tbody.appendChild(row);
+                if (data.success) {
+                    const tbody = document.getElementById('deposits-list');
+                    tbody.innerHTML = '';
+                    
+                    data.requests.forEach(deposit => {
+                        const statusColors = {
+                            'pending': '#ffc107',
+                            'approved': '#28a745',
+                            'rejected': '#dc3545'
+                        };
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${deposit.id.substring(0, 8)}...</td>
+                            <td>${deposit.username}</td>
+                            <td>₦${deposit.amount.toLocaleString()}</td>
+                            <td>${deposit.paymentProof ? '📎 Provided' : 'No proof'}</td>
+                            <td style="color: ${statusColors[deposit.status]}">
+                                ${deposit.status.toUpperCase()}
+                            </td>
+                            <td>${new Date(deposit.createdAt).toLocaleString()}</td>
+                            <td>
+                                ${deposit.status === 'pending' ? `
+                                    <button class="btn btn-approve" onclick="approveDeposit('${deposit.id}')">✅ Approve</button>
+                                    <button class="btn btn-reject" onclick="rejectDeposit('${deposit.id}')">❌ Reject</button>
+                                ` : 'No actions'}
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error("Load deposits error:", error);
+                alert("Failed to load deposits");
+            }
+        }
+        
+        // ========== WITHDRAWALS ==========
+        async function loadWithdrawals() {
+            try {
+                const response = await fetch(API + "/api/admin/withdrawal-requests", {
+                    headers: adminHeaders
                 });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('withdrawals-list');
+                    tbody.innerHTML = '';
+                    
+                    if (data.requests && data.requests.length > 0) {
+                        data.requests.forEach(request => {
+                            const statusColors = {
+                                'pending': '#ffc107',
+                                'approved': '#28a745',
+                                'rejected': '#dc3545',
+                                'paid': '#17a2b8'
+                            };
+                            
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${request.requestId ? request.requestId.substring(0, 8) : 'N/A'}...</td>
+                                <td>${request.username || 'Unknown'}</td>
+                                <td>₦${(request.amount || 0).toLocaleString()}</td>
+                                <td>${request.bankName || ''} - ${request.accountNumber || ''}</td>
+                                <td style="color: ${request.userBalance < request.amount ? '#ff6b6b' : '#28a745'}">
+                                    ₦${(request.userBalance || 0).toLocaleString()}
+                                </td>
+                                <td style="color: ${statusColors[request.status] || '#000'}">
+                                    ${(request.status || 'pending').toUpperCase()}
+                                </td>
+                                <td>${new Date(request.requestedAt || Date.now()).toLocaleString()}</td>
+                                <td>
+                                    ${request.status === 'pending' ? `
+                                        <button class="btn btn-approve" onclick="approveWithdrawal('${request.requestId || request.id}')">✅ Approve</button>
+                                        <button class="btn btn-reject" onclick="rejectWithdrawal('${request.requestId || request.id}')">❌ Reject</button>
+                                    ` : request.status === 'approved' ? `
+                                        <button class="btn btn-unlock" onclick="markPaid('${request.requestId || request.id}')">💰 Mark Paid</button>
+                                    ` : 'No actions'}
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ccc;">No withdrawal requests found</td></tr>`;
+                    }
+                }
+            } catch (error) {
+                console.error("🔥 Load withdrawals error:", error);
+                document.getElementById('withdrawals-list').innerHTML = 
+                    `<tr><td colspan="8" style="text-align: center; color: #ff6b6b;">Error loading withdrawals</td></tr>`;
             }
-        } catch (error) {
-            console.error("Load eligible users error:", error);
-            alert("Failed to load eligible users");
         }
-    }
-    
-    // User actions
-    async function unlockUser(userId) {
-        if (!confirm("Unlock withdrawal for this user?")) return;
         
-        try {
-            const response = await fetch(API + `/api/admin/unlock-withdrawal/${userId}`, {
-                method: "POST",
-                headers: adminHeaders
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                alert("✅ User unlocked!");
-                loadEligibleUsers();
-                loadUsers();
-            } else {
-                alert(data.message);
+        // ========== ELIGIBLE USERS ==========
+        async function loadEligibleUsers() {
+            try {
+                const response = await fetch(API + "/api/admin/eligible-users", { headers: adminHeaders });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('unlock-list');
+                    tbody.innerHTML = '';
+                    
+                    data.users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.username}</td>
+                            <td>₦${user.tier.toLocaleString()}</td>
+                            <td>₦${user.staked.toLocaleString()} / ₦${user.stakeTarget.toLocaleString()}</td>
+                            <td>₦${user.won.toLocaleString()} / ₦${user.winTarget.toLocaleString()}</td>
+                            <td>✅ YES</td>
+                            <td>${user.withdrawalUnlocked ? '🔓 Unlocked' : '🔒 Locked'}</td>
+                            <td>
+                                ${!user.withdrawalUnlocked ? 
+                                    `<button class="btn btn-approve" onclick="unlockUser('${user.id}')">🔓 Unlock</button>` :
+                                    `<button class="btn btn-reject" onclick="lockUser('${user.id}')">🔒 Lock</button>`
+                                }
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error("Load eligible users error:", error);
+                alert("Failed to load eligible users");
             }
-        } catch (error) {
-            console.error("Unlock user error:", error);
-            alert("Failed to unlock user");
         }
-    }
-    
-    async function lockUser(userId) {
-        if (!confirm("Lock withdrawal for this user?")) return;
         
-        try {
-            const response = await fetch(API + `/api/admin/lock-withdrawal/${userId}`, {
-                method: "POST",
-                headers: adminHeaders
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                alert("✅ User locked!");
-                loadEligibleUsers();
-                loadUsers();
-            } else {
-                alert(data.message);
+        // ========== REFERRAL STATS ==========
+        async function loadReferralStats() {
+            try {
+                const response = await fetch(API + "/api/admin/referral-stats", {
+                    headers: adminHeaders
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('referrals-list');
+                    tbody.innerHTML = '';
+                    
+                    if (data.stats && data.stats.length > 0) {
+                        data.stats.forEach(stat => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${stat.username}</td>
+                                <td class="referral-code">${stat.referral_code || '—'}</td>
+                                <td>${stat.referredCount || 0}</td>
+                                <td>₦${(stat.total_referral_deposits || 0).toLocaleString()}</td>
+                                <td>₦${(stat.referral_earnings || 0).toLocaleString()}</td>
+                                <td>${new Date(stat.created_at).toLocaleDateString()}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ccc;">No referral data found</td></tr>`;
+                    }
+                }
+            } catch (error) {
+                console.error("Load referral stats error:", error);
+                alert("Failed to load referral statistics");
             }
-        } catch (error) {
-            console.error("Lock user error:", error);
-            alert("Failed to lock user");
         }
-    }
-    
-    // Deposit actions
-    async function approveDeposit(requestId) {
-        const notes = prompt("Approval notes (optional):");
         
-        try {
-            const response = await fetch(API + `/api/admin/approve-deposit/${requestId}`, {
-                method: "POST",
-                headers: adminHeaders,
-                body: JSON.stringify({ notes })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                alert("✅ Deposit approved! User's balance updated.");
-                loadDeposits();
-            } else {
-                alert(data.message);
+        // ========== USER ACTIONS ==========
+        async function unlockUser(userId) {
+            if (!confirm("Unlock withdrawal for this user?")) return;
+            try {
+                const response = await fetch(API + `/api/admin/unlock-withdrawal/${userId}`, {
+                    method: "POST",
+                    headers: adminHeaders
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ User unlocked!");
+                    loadEligibleUsers();
+                    loadUsers();
+                } else alert(data.message);
+            } catch (error) {
+                console.error("Unlock user error:", error);
+                alert("Failed to unlock user");
             }
-        } catch (error) {
-            console.error("Approve deposit error:", error);
-            alert("Failed to approve deposit");
         }
-    }
-    
-    async function rejectDeposit(requestId) {
-        const notes = prompt("Rejection reason:");
         
-        try {
-            const response = await fetch(API + `/api/admin/reject-deposit/${requestId}`, {
-                method: "POST",
-                headers: adminHeaders,
-                body: JSON.stringify({ notes })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                alert("✅ Deposit rejected!");
-                loadDeposits();
-            } else {
-                alert(data.message);
+        async function lockUser(userId) {
+            if (!confirm("Lock withdrawal for this user?")) return;
+            try {
+                const response = await fetch(API + `/api/admin/lock-withdrawal/${userId}`, {
+                    method: "POST",
+                    headers: adminHeaders
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ User locked!");
+                    loadEligibleUsers();
+                    loadUsers();
+                } else alert(data.message);
+            } catch (error) {
+                console.error("Lock user error:", error);
+                alert("Failed to lock user");
             }
-        } catch (error) {
-            console.error("Reject deposit error:", error);
-            alert("Failed to reject deposit");
         }
-    }
-    
-    // Withdrawal actions
-async function approveWithdrawal(requestId) {
-    if (!confirm("Approve this withdrawal and deduct amount from user's balance?")) return;
-    
-    const notes = prompt("Approval notes (optional):");
-    
-    try {
-        const response = await fetch(API + `/api/admin/approve-withdrawal/${requestId}`, {
-            method: "POST",
-            headers: adminHeaders,
-            body: JSON.stringify({ notes: notes || "" })
-        });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            alert(`✅ ${data.message}\nUser new balance: ₦${data.request.userBalance.toLocaleString()}`);
-            loadWithdrawals();
-        } else {
-            alert("Error: " + data.message);
+        async function deleteUser(userId) {
+            if (!confirm("⚠️ Are you sure you want to delete this user? All their data will be permanently removed.")) return;
+            try {
+                const response = await fetch(API + `/api/admin/users/${userId}`, {
+                    method: "DELETE",
+                    headers: adminHeaders
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ User deleted!");
+                    loadUsers();
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                console.error("Delete user error:", error);
+                alert("Failed to delete user");
+            }
         }
-    } catch (error) {
-        console.error("Approve withdrawal error:", error);
-        alert("Failed to approve withdrawal");
-    }
-}
-
-async function rejectWithdrawal(requestId) {
-    if (!confirm("Reject this withdrawal request?")) return;
-    
-    const notes = prompt("Rejection reason (required):");
-    if (!notes) {
-        alert("Please provide a rejection reason");
-        return;
-    }
-    
-    try {
-        const response = await fetch(API + `/api/admin/reject-withdrawal/${requestId}`, {
-            method: "POST",
-            headers: adminHeaders,
-            body: JSON.stringify({ notes })
-        });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            alert("✅ Withdrawal rejected!");
-            loadWithdrawals();
-        } else {
-            alert("Error: " + data.message);
+        // ========== DEPOSIT ACTIONS ==========
+        async function approveDeposit(requestId) {
+            const notes = prompt("Approval notes (optional):");
+            try {
+                const response = await fetch(API + `/api/admin/approve-deposit/${requestId}`, {
+                    method: "POST",
+                    headers: adminHeaders,
+                    body: JSON.stringify({ notes })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ Deposit approved! User's balance updated.");
+                    loadDeposits();
+                } else alert(data.message);
+            } catch (error) {
+                console.error("Approve deposit error:", error);
+                alert("Failed to approve deposit");
+            }
         }
-    } catch (error) {
-        console.error("Reject withdrawal error:", error);
-        alert("Failed to reject withdrawal");
-    }
-}
-
-// NEW: Mark withdrawal as paid
-async function markPaid(requestId) {
-    const paymentProof = prompt("Enter payment proof/receipt number:");
-    if (!paymentProof) {
-        alert("Payment proof is required");
-        return;
-    }
-    
-    try {
-        const response = await fetch(API + `/api/admin/mark-paid/${requestId}`, {
-            method: "POST",
-            headers: adminHeaders,
-            body: JSON.stringify({ paymentProof })
-        });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            alert("✅ Withdrawal marked as paid!");
-            loadWithdrawals();
-        } else {
-            alert("Error: " + data.message);
+        async function rejectDeposit(requestId) {
+            const notes = prompt("Rejection reason:");
+            try {
+                const response = await fetch(API + `/api/admin/reject-deposit/${requestId}`, {
+                    method: "POST",
+                    headers: adminHeaders,
+                    body: JSON.stringify({ notes })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ Deposit rejected!");
+                    loadDeposits();
+                } else alert(data.message);
+            } catch (error) {
+                console.error("Reject deposit error:", error);
+                alert("Failed to reject deposit");
+            }
         }
-    } catch (error) {
-        console.error("Mark paid error:", error);
-        alert("Failed to mark as paid");
-    }
-}
-
-async function deleteUser(userId) {
-  if (!confirm("⚠️ Are you sure you want to delete this user? All their data will be permanently removed.")) return;
-  try {
-    const response = await fetch(API + `/api/admin/users/${userId}`, {
-      method: "DELETE",
-      headers: adminHeaders
-    });
-    const data = await response.json();
-    if (data.success) {
-      alert("✅ User deleted!");
-      loadUsers();
-    } else {
-      alert(data.message);
-    }
-  } catch (error) {
-    console.error("Delete user error:", error);
-    alert("Failed to delete user");
-  }
-}
-    
-    // Load initial data
-    window.onload = function() {
-        loadUsers();
-    };
+        
+        // ========== WITHDRAWAL ACTIONS ==========
+        async function approveWithdrawal(requestId) {
+            if (!confirm("Approve this withdrawal and deduct amount from user's balance?")) return;
+            const notes = prompt("Approval notes (optional):");
+            try {
+                const response = await fetch(API + `/api/admin/approve-withdrawal/${requestId}`, {
+                    method: "POST",
+                    headers: adminHeaders,
+                    body: JSON.stringify({ notes: notes || "" })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`✅ ${data.message}\nUser new balance: ₦${data.request.userBalance.toLocaleString()}`);
+                    loadWithdrawals();
+                } else alert("Error: " + data.message);
+            } catch (error) {
+                console.error("Approve withdrawal error:", error);
+                alert("Failed to approve withdrawal");
+            }
+        }
+        
+        async function rejectWithdrawal(requestId) {
+            if (!confirm("Reject this withdrawal request?")) return;
+            const notes = prompt("Rejection reason (required):");
+            if (!notes) {
+                alert("Please provide a rejection reason");
+                return;
+            }
+            try {
+                const response = await fetch(API + `/api/admin/reject-withdrawal/${requestId}`, {
+                    method: "POST",
+                    headers: adminHeaders,
+                    body: JSON.stringify({ notes })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ Withdrawal rejected!");
+                    loadWithdrawals();
+                } else alert("Error: " + data.message);
+            } catch (error) {
+                console.error("Reject withdrawal error:", error);
+                alert("Failed to reject withdrawal");
+            }
+        }
+        
+        async function markPaid(requestId) {
+            const paymentProof = prompt("Enter payment proof/receipt number:");
+            if (!paymentProof) {
+                alert("Payment proof is required");
+                return;
+            }
+            try {
+                const response = await fetch(API + `/api/admin/mark-paid/${requestId}`, {
+                    method: "POST",
+                    headers: adminHeaders,
+                    body: JSON.stringify({ paymentProof })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ Withdrawal marked as paid!");
+                    loadWithdrawals();
+                } else alert("Error: " + data.message);
+            } catch (error) {
+                console.error("Mark paid error:", error);
+                alert("Failed to mark as paid");
+            }
+        }
+        
+        // ========== INITIAL LOAD ==========
+        window.onload = function() {
+            loadUsers();
+        };
     </script>
-
 </body>
 </html>

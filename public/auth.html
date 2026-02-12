@@ -2,223 +2,291 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Login | Scratch Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Scratch & Win</title>
   <style>
-  * {
-    box-sizing: border-box;
-  }
+    * {
+      box-sizing: border-box;
+    }
 
-  body {
-    background: #1a0033;
-    color: white;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-  }
+    body {
+      background: #1a0033;
+      color: white;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
 
-  .box {
-    background: #000;
-    padding: 25px;
-    border-radius: 12px;
-    width: 320px;
-    text-align: center;
-  }
+    .box {
+      background: #0a0a0a;
+      padding: 30px 25px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      border: 2px solid #d4af37;
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+    }
 
-  .box h3 {
-    margin-bottom: 15px;
-  }
+    .box h3 {
+      margin-bottom: 20px;
+      color: #d4af37;
+      font-size: 24px;
+      letter-spacing: 1px;
+    }
 
-  input {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 6px;
-    border: none;
-    outline: none;
-    font-size: 14px;
-  }
+    input {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      background: #222;
+      color: white;
+      border: 1px solid #444;
+      transition: border 0.2s;
+    }
 
-  button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 12px;
-    border-radius: 6px;
-    border: none;
-    background: #008751;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 14px;
-  }
+    input:focus {
+      border-color: #d4af37;
+    }
 
-  .link {
-    margin-top: 12px;
-    font-size: 12px;
-    cursor: pointer;
-    color: #ccc;
-  }
+    input::placeholder {
+      color: #aaa;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 20px;
+      border-radius: 8px;
+      border: none;
+      background: #008751;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #00a86b;
+    }
+
+    .link {
+      margin-top: 18px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #d4af37;
+      text-decoration: underline;
+    }
+
+    .link:hover {
+      color: #ffd700;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .referral-note {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: -5px;
+      margin-bottom: 5px;
+      text-align: left;
+    }
+
+    #mute-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: transparent;
+      border: 1px solid #d4af37;
+      color: white;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
 
-<div class="box">
-  <h3 id="title">LOGIN</h3>
+  <button id="mute-btn" title="Toggle Music">🔊</button>
 
-  <input id="phone" placeholder="Phone Number" style="display:none">
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
+  <div class="box">
+    <h3 id="title">🔐 LOGIN</h3>
 
-  <button onclick="submit()">LOGIN</button>
+    <!-- Phone field (hidden by default, shown on register) -->
+    <input type="tel" id="phone" class="hidden" placeholder="Phone Number">
 
-  <div class="link" onclick="toggle()">Create account</div>
-</div>
+    <!-- Username & Password -->
+    <input type="text" id="username" placeholder="Username" autocomplete="username">
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
 
-<input id="referral" placeholder="Referral Code (optional)">
+    <!-- Referral field (hidden by default, shown on register) -->
+    <div id="referral-container" class="hidden">
+      <input type="text" id="referral" placeholder="Referral Code (optional)">
+      <div class="referral-note">Have a referral code? Enter it here</div>
+    </div>
 
-<script>
-const API = window.location.origin;
-let isRegister = false;
+    <button id="main-action-btn" onclick="submit()">LOGIN</button>
 
-function toggle() {
-  isRegister = !isRegister;
-  document.getElementById("title").innerText = isRegister ? "REGISTER" : "LOGIN";
-  document.querySelector("button").innerText = isRegister ? "REGISTER" : "LOGIN";
-  document.getElementById("phone").style.display = isRegister ? "block" : "none";
-}
+    <div class="link" onclick="toggle()">Create new account</div>
+  </div>
 
-async function submit() {
-  console.log("Submit button clicked");
-  
-  try {
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const phone = document.getElementById("phone").value.trim();
+  <script>
+    const API = window.location.origin;
+    let isRegister = false;
 
-    console.log("Username:", username, "Password:", password);
-    
-    const endpoint = isRegister ? "/auth/register" : "/auth/login";
-    console.log("API Endpoint:", API + endpoint);
-
-    const payload = isRegister
-  ? { 
-      phone, 
-      username, 
-      password,
-      referralCode: document.getElementById('referral').value.trim() || null
-    }
-  : { username, password };
-
-    console.log("Sending payload:", payload);
-
-    const res = await fetch(API + endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    console.log("Response status:", res.status);
-    console.log("Response headers:", res.headers);
-
-    const data = await res.json();
-    console.log("Response data:", data);
-
-    if (!res.ok) {
-      alert(data.message || "Action failed. Check console.");
-      return;
-    }
-
-    // 🔑 LOGIN SUCCESS
-    if (data.token) {
-      console.log("✅ Token received");
-      localStorage.setItem("token", data.token);
+    // Toggle between Login and Register
+    function toggle() {
+      isRegister = !isRegister;
       
-      // Check if user already selected tier
-      setTimeout(async () => {
-        try {
-          const checkResponse = await fetch(API + "/deposit/has-tier", {
-            headers: { 
-              "Authorization": `Bearer ${data.token}`,
-              "Content-Type": "application/json"
-            }
-          });
-          
-          const checkData = await checkResponse.json();
-          
-          if (checkData.hasTier) {
-            window.location.href = "game.html";
-          } else {
-            window.location.href = "select-tier.html";
-          }
-        } catch (error) {
-          console.error("Check tier error:", error);
-          window.location.href = "select-tier.html"; // Default to tier selection
-        }
-      }, 100);
-    } else {
-      console.error("No token in response:", data);
-      alert("No token received. Check console.");
+      // Update title and button text
+      document.getElementById("title").innerText = isRegister ? "📝 REGISTER" : "🔐 LOGIN";
+      document.getElementById("main-action-btn").innerText = isRegister ? "REGISTER" : "LOGIN";
+      
+      // Show/hide phone field
+      const phoneField = document.getElementById("phone");
+      phoneField.classList.toggle("hidden", !isRegister);
+      
+      // Show/hide referral field
+      const referralContainer = document.getElementById("referral-container");
+      referralContainer.classList.toggle("hidden", !isRegister);
     }
 
-  } catch (err) {
-    console.error("Login error:", err);
-    alert("Login failed: " + err.message);
-  }
-} // <-- THIS WAS MISSING - CLOSING BRACE FOR submit() FUNCTION
-</script>
-<script>
-// Audio for login/register pages
-(function() {
-    console.log('🎵 Setting up page audio...');
-    
-    // Check mute preference
-    const isMuted = localStorage.getItem('musicMuted') === 'true';
-    
-    // Create audio element with WORKING OGG file
-    const audio = new Audio('https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg');
-    audio.loop = true;
-    audio.volume = 0.3;
-    audio.muted = isMuted;
-    audio.load();
-    
-    // Update button if exists
-    const btn = document.getElementById('mute-btn');
-    if (btn) {
+    // Main submit handler
+    async function submit() {
+      console.log("Submit clicked, isRegister =", isRegister);
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      
+      if (!username || !password) {
+        alert("Username and password are required");
+        return;
+      }
+
+      let payload;
+      const endpoint = isRegister ? "/auth/register" : "/auth/login";
+
+      if (isRegister) {
+        const phone = document.getElementById("phone").value.trim();
+        if (!phone) {
+          alert("Phone number is required for registration");
+          return;
+        }
+        const referralCode = document.getElementById("referral").value.trim() || null;
+        payload = { phone, username, password, referralCode };
+      } else {
+        payload = { username, password };
+      }
+
+      console.log("Sending to", endpoint, payload);
+
+      try {
+        const res = await fetch(API + endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          alert(data.message || "Authentication failed");
+          return;
+        }
+
+        // Save token and redirect
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          console.log("✅ Login successful, redirecting...");
+
+          // Check if user already selected a tier
+          setTimeout(async () => {
+            try {
+              const tierCheck = await fetch(API + "/deposit/has-tier", {
+                headers: { "Authorization": `Bearer ${data.token}` }
+              });
+              const tierData = await tierCheck.json();
+              
+              if (tierData.hasTier) {
+                window.location.href = "game.html";
+              } else {
+                window.location.href = "select-tier.html";
+              }
+            } catch (error) {
+              console.warn("Tier check failed, defaulting to tier selection", error);
+              window.location.href = "select-tier.html";
+            }
+          }, 100);
+        } else {
+          alert("No token received. Please try again.");
+        }
+      } catch (err) {
+        console.error("Network error:", err);
+        alert("Network error. Please check your connection.");
+      }
+    }
+
+    // ---------- AUDIO CONTROLLER ----------
+    (function initAudio() {
+      console.log('🎵 Setting up audio...');
+      const isMuted = localStorage.getItem('musicMuted') === 'true';
+      
+      // Create audio element
+      const audio = new Audio('https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg');
+      audio.loop = true;
+      audio.volume = 0.3;
+      audio.muted = isMuted;
+      audio.load();
+
+      // Mute button
+      const btn = document.getElementById('mute-btn');
+      if (btn) {
         btn.innerHTML = isMuted ? '🔇' : '🔊';
         btn.style.color = isMuted ? '#888' : '#fff';
-        btn.onclick = function() {
-            const newMuted = !isMuted;
-            localStorage.setItem('musicMuted', newMuted);
-            location.reload();
+        btn.onclick = function(e) {
+          e.preventDefault();
+          const newMuted = !audio.muted;
+          audio.muted = newMuted;
+          localStorage.setItem('musicMuted', newMuted);
+          btn.innerHTML = newMuted ? '🔇' : '🔊';
+          btn.style.color = newMuted ? '#888' : '#fff';
+          
+          if (!newMuted && audio.paused) {
+            audio.play().catch(e => console.log('Play on unmute failed:', e));
+          }
         };
-    }
-    
-    // Start on ANY click
-    const startOnClick = () => {
-        if (!isMuted && audio.paused) {
-            audio.play().then(() => {
-                console.log('✅ Page music started');
-            }).catch(e => {
-                console.log('Page audio failed:', e.message);
-            });
-        }
-    };
-    
-    document.addEventListener('click', startOnClick);
-    document.addEventListener('touchstart', startOnClick);
-    
-    // Also try auto-start
-    setTimeout(() => {
-        if (!isMuted && audio.paused) {
-            audio.play().catch(e => {
-                console.log('Auto-start failed, waiting for click');
-            });
-        }
-    }, 1500);
-})();
-</script>
+      }
 
+      // Try to autoplay after user interaction
+      const startAudio = () => {
+        if (!audio.muted && audio.paused) {
+          audio.play().catch(e => console.log('Autoplay blocked, waiting for click'));
+        }
+      };
+
+      // Start on any click/touch
+      document.addEventListener('click', startAudio, { once: true });
+      document.addEventListener('touchstart', startAudio, { once: true });
+
+      // Also try after 2 seconds (some browsers allow it)
+      setTimeout(startAudio, 2000);
+    })();
+  </script>
 </body>
 </html>
