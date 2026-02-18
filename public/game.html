@@ -917,18 +917,15 @@
     // Win effects
     function playWinSound() {
       const sound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3');
+      win: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3');
+      loss: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-952.mp3');
+      scratch: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-quick-sweep-441.mp3');
+      deposit: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-coin-insert-1939.mp3');
+      withdrawal: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-cash-register-1700.mp3');
+      
       sound.volume = 5;
       sound.play().catch(e => {});
     }
-
-    // ========== SOUND EFFECTS ==========
-const sounds = {
-  win: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3'),
-  loss: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-952.mp3'),
-  scratch: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-quick-sweep-441.mp3'),
-  deposit: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-coin-insert-1939.mp3'),
-  withdrawal: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-cash-register-1700.mp3')
-};
 
 // Set volume (optional)
 Object.values(sounds).forEach(s => s.volume = 0.5);
