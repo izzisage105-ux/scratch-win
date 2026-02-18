@@ -577,8 +577,8 @@
       <div style="background: rgba(0,135,81,0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
         <p style="font-size: 13px; color: var(--gold); margin: 0 0 8px;"><b>Withdrawal Status:</b> <span id="withdrawal-status-text">Checking...</span></p>
         <p style="font-size: 12px; color: #ccc; margin: 5px 0;">
-          • Staking: <span id="stake-req">₦5,000</span><br>
-          • Winnings: <span id="win-req">₦3,000</span>
+          • Staking: <span id="stake-req">₦15,000</span><br>
+          • Winnings: <span id="win-req">₦30,000</span>
         </p>
       </div>
 
@@ -906,7 +906,7 @@
     // Win effects
     function playWinSound() {
       const sound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3');
-      sound.volume = 0.5;
+      sound.volume = 5;
       sound.play().catch(e => {});
     }
 
@@ -1221,7 +1221,7 @@
       try {
         audio = new Audio('https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg');
         audio.loop = true;
-        audio.volume = 0.4;
+        audio.volume = 4;
         audio.muted = isMuted;
         audio.load();
 

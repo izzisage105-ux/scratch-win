@@ -18,10 +18,10 @@ class ScratchGameLogic {
                 'D': { winChance: 0.25, amounts: [1000, 2000, 3000, 4000, 5000] }
             },
             real: {
-                'A': { winChance: 0.2, amounts: [150, 300, 450, 600, 750] },
-                'B': { winChance: 0.18, amounts: [300, 600, 900, 1200, 1500] },
-                'C': { winChance: 0.15, amounts: [500, 1000, 1500, 2000, 2500] },
-                'D': { winChance: 0.12, amounts: [1000, 2000, 3000, 4000, 5000] }
+                'A': { winChance: 0.0001, amounts: [50, 100, 150, 300, 450, 600] },
+                'B': { winChance: 0.0001, amounts: [100, 200, 300, 500, 750] },
+                'C': { winChance: 0.0001, amounts: [150, 300, 500, 750, 1000] },
+                'D': { winChance: 0.0001, amounts: [300, 500, 750, 900, 1050] }
             }
         };
     }

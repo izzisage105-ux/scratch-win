@@ -71,9 +71,9 @@ class GameLogic {
       },
       real: {
         'A': { winChance: 0.0001, amounts: [50, 100, 150, 300, 450, 600] },
-        'B': { winChance: 0.05, amounts: [100, 200, 300, 500, 750] },
-        'C': { winChance: 0.05, amounts: [150, 300, 500, 750, 1000] },
-        'D': { winChance: 0.05, amounts: [300, 500, 750, 1000, 1250] }
+        'B': { winChance: 0.0001, amounts: [100, 200, 300, 500, 750] },
+        'C': { winChance: 0.0001, amounts: [150, 300, 500, 750, 1000] },
+        'D': { winChance: 0.0001, amounts: [300, 500, 750, 900, 1050] }
       }
     };
   }
@@ -764,9 +764,9 @@ app.get("/withdrawal/requirements", authMiddleware, async (req, res) => {
 
     const tier = user.depositTier || 1000;
     const requirements = {
-      1000: { stakeTarget: 5000, winTarget: 3000 },
-      5000: { stakeTarget: 20000, winTarget: 15000 },
-      10000: { stakeTarget: 40000, winTarget: 30000 }
+      1000: { stakeTarget: 15000, winTarget: 30000 },
+      5000: { stakeTarget: 30000, winTarget: 50000 },
+      10000: { stakeTarget: 75000, winTarget: 100000 }
     };
     const reqs = requirements[tier] || requirements[1000];
     const staked = user.totalStakedReal || 0;
@@ -963,9 +963,9 @@ app.get("/api/admin/eligible-users", adminMiddleware, async (req, res) => {
     if (error) throw error;
 
     const targets = {
-      1000: { stakeTarget: 5000, winTarget: 3000 },
-      5000: { stakeTarget: 20000, winTarget: 15000 },
-      10000: { stakeTarget: 40000, winTarget: 30000 }
+      1000: { stakeTarget: 15000, winTarget: 30000 },
+      5000: { stakeTarget: 30000, winTarget: 50000 },
+      10000: { stakeTarget: 75000, winTarget: 100000 }
     };
 
     const eligible = users
