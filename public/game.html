@@ -880,18 +880,29 @@
           setTimeout(() => canvas.remove(), 400);
         }
       };
-      const scratch = (e) => {
-        if (!isDrawing) return;
-        moved = true;
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX || (e.touches?.[0]?.clientX)) - rect.left;
-        const y = (e.clientY || (e.touches?.[0]?.clientY)) - rect.top;
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(x, y, 18, 0, Math.PI * 2);
-        ctx.fill();
-      };
+     const scratch = (e) => {
+  if (!isDrawing) return;
+  moved = true;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX || (e.touches?.[0]?.clientX)) - rect.left;
+  const y = (e.clientY || (e.touches?.[0]?.clientY)) - rect.top;
+
+  // Erase a circle
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(x, y, 18, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Add sparkle effect (draw small white circles)
+  ctx.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.5})`;
+    ctx.beginPath();
+    ctx.arc(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20, Math.random() * 3 + 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+};
 
       canvas.addEventListener('mousedown', start);
       canvas.addEventListener('touchstart', start);
@@ -909,6 +920,26 @@
       sound.volume = 5;
       sound.play().catch(e => {});
     }
+
+    // ========== SOUND EFFECTS ==========
+const sounds = {
+  win: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3'),
+  loss: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-952.mp3'),
+  scratch: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-quick-sweep-441.mp3'),
+  deposit: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-coin-insert-1939.mp3'),
+  withdrawal: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-cash-register-1700.mp3')
+};
+
+// Set volume (optional)
+Object.values(sounds).forEach(s => s.volume = 0.5);
+
+function playSound(name) {
+  const sound = sounds[name];
+  if (sound && !localStorage.getItem('musicMuted') === 'true') {
+    sound.currentTime = 0;
+    sound.play().catch(e => console.log('Sound play failed:', e));
+  }
+}
 
     function triggerWin(amount) {
       setTimeout(() => {
