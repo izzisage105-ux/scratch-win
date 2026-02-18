@@ -771,8 +771,8 @@ app.get("/withdrawal/requirements", authMiddleware, async (req, res) => {
     const reqs = requirements[tier] || requirements[1000];
     const staked = user.totalStakedReal || 0;
     const won = user.totalWonReal || 0;
-    const stakeProgress = Math.min((staked / reqs.stakeTarget) * 10, 10);
-    const winProgress = Math.min((won / reqs.winTarget) * 10, 10);
+    const stakeProgress = Math.min((staked / reqs.stakeTarget) * 100, 100);
+    const winProgress = Math.min((won / reqs.winTarget) * 100, 100);
     const bothMet = staked >= reqs.stakeTarget && won >= reqs.winTarget;
 
     res.json({
