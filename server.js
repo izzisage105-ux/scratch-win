@@ -28,6 +28,9 @@ if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+// ========== WIN RATE CONFIGURATION ==========
+const WIN_CAP_RATIO = 0.05; // 5% max wins per total games played (e.g., 10 wins in 200 games)
+
 // ========== REFERRAL CODE GENERATOR ==========
 function generateReferralCode(length = 6) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -70,10 +73,10 @@ class GameLogic {
         'D': { winChance: 0.4, amounts: [1000, 2000, 3000, 4000, 5000] }
       },
       real: {
-        'A': { winChance: 0.0001, amounts: [50, 100, 150, 300, 450, 600] },
-        'B': { winChance: 0.0001, amounts: [100, 200, 300, 500, 750] },
-        'C': { winChance: 0.0001, amounts: [150, 300, 500, 750, 1000] },
-        'D': { winChance: 0.0001, amounts: [300, 500, 750, 900, 1050] }
+        'A': { winChance: 0.05, amounts: [50, 100, 150, 300, 450, 600] },
+        'B': { winChance: 0.05, amounts: [100, 200, 300, 500, 750] },
+        'C': { winChance: 0.05, amounts: [150, 300, 500, 750, 1000] },
+        'D': { winChance: 0.05, amounts: [300, 500, 750, 900, 1050] }
       }
     };
   }
@@ -91,6 +94,61 @@ class GameLogic {
     for (let i = 0; i < 9; i++) {
       grid.push(sectionProb.amounts[Math.floor(Math.random() * sectionProb.amounts.length)]);
     }
+    return grid;
+  }
+
+  // Generate a grid with no three matching values (prevents natural wins)
+  generateGridNoWin(section, mode) {
+    const amounts = this.probabilities[mode][section].amounts;
+    const maxAttempts = 100;
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const grid = [];
+      for (let i = 0; i < 9; i++) {
+        grid.push(amounts[Math.floor(Math.random() * amounts.length)]);
+      }
+      
+      // Check if any value appears 3 or more times
+      const counts = {};
+      let hasTriple = false;
+      for (let val of grid) {
+        counts[val] = (counts[val] || 0) + 1;
+        if (counts[val] >= 3) {
+          hasTriple = true;
+          break;
+        }
+      }
+      
+      if (!hasTriple) return grid;
+    }
+    
+    // Fallback: manually ensure no triple by replacing duplicates
+    const grid = [];
+    for (let i = 0; i < 9; i++) {
+      grid.push(amounts[Math.floor(Math.random() * amounts.length)]);
+    }
+    
+    // Fix any triple that exists
+    const counts = {};
+    for (let val of grid) counts[val] = (counts[val] || 0) + 1;
+    
+    for (let val in counts) {
+      if (counts[val] >= 3) {
+        // Find indices of this value
+        const indices = [];
+        grid.forEach((v, idx) => { if (v == val) indices.push(idx); });
+        
+        // Replace the third occurrence with a different amount
+        let newVal;
+        do {
+          newVal = amounts[Math.floor(Math.random() * amounts.length)];
+        } while (newVal == val);
+        
+        grid[indices[2]] = newVal;
+        break;
+      }
+    }
+    
     return grid;
   }
 
@@ -216,6 +274,7 @@ async function initializeAdminAccounts() {
         accountNumber: '',
         withdrawalUnlocked: false,
         gamesPlayed: 0,
+        totalWins: 0, // Added for win cap
         isAdmin: true,
         adminRole: acc.name,
         createdAt: new Date().toISOString(),
@@ -286,6 +345,7 @@ app.post("/auth/register", async (req, res) => {
       accountNumber: '',
       withdrawalUnlocked: false,
       gamesPlayed: 0,
+      totalWins: 0, // Added for win cap
       createdAt: new Date().toISOString(),
       referral_code: newReferralCode,
       referred_by: referrer ? referrer.id : null,
@@ -362,7 +422,7 @@ app.get("/user/me", authMiddleware, async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, realBalance, demoBalance, depositTier, currentBalanceMode, totalStakedReal, totalStakedDemo')
+      .select('id, username, realBalance, demoBalance, depositTier, currentBalanceMode, totalStakedReal, totalStakedDemo, totalWins')
       .eq('id', req.user.id)
       .single();
     if (error || !user) return res.status(404).json({ success: false, message: "User not found" });
@@ -376,7 +436,8 @@ app.get("/user/me", authMiddleware, async (req, res) => {
         depositTier: user.depositTier,
         currentBalanceMode: user.currentBalanceMode || 'demo',
         totalStakedReal: user.totalStakedReal || 0,
-        totalStakedDemo: user.totalStakedDemo || 0
+        totalStakedDemo: user.totalStakedDemo || 0,
+        totalWins: user.totalWins || 0
       }
     });
   } catch (error) {
@@ -443,11 +504,32 @@ app.post("/game/play", authMiddleware, async (req, res) => {
     const balance = mode === 'demo' ? user.demoBalance : user.realBalance;
     if (balance < stake) return res.status(400).json({ success: false, message: `Insufficient ${mode} balance` });
 
-    const section = gameLogic.getSectionFromStake(stake);
-    let grid = gameLogic.generateGrid(section, mode);
-    grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
-    const result = gameLogic.checkForWin(grid);
+    // ---------- WIN CAP CHECK ----------
+    const gamesPlayed = user.gamesPlayed || 0;
+    const totalWins = user.totalWins || 0;
+    const maxWinsAfterThisGame = Math.floor((gamesPlayed + 1) * WIN_CAP_RATIO);
+    const forcedLoss = totalWins >= maxWinsAfterThisGame;
 
+    const section = gameLogic.getSectionFromStake(stake);
+
+    // Generate a grid that initially has no triple for real mode
+    let grid;
+    if (mode === 'real') {
+      grid = gameLogic.generateGridNoWin(section, mode);
+    } else {
+      grid = gameLogic.generateGrid(section, mode); // demo can keep natural wins for fun
+    }
+
+    // Apply probability-based win only if not forced to lose
+    let result;
+    if (!forcedLoss) {
+      grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
+      result = gameLogic.checkForWin(grid);
+    } else {
+      result = { isWin: false, winAmount: 0, matchingIndices: [] };
+    }
+
+    // Prepare updates
     let updates = {};
     let gameRecord = {
       id: Date.now().toString(),
@@ -477,15 +559,18 @@ app.post("/game/play", authMiddleware, async (req, res) => {
         updates.totalWonReal = (user.totalWonReal || 0) + result.winAmount;
       }
     }
-    updates.gamesPlayed = (user.gamesPlayed || 0) + 1;
+    updates.gamesPlayed = gamesPlayed + 1;
     updates.lastGamePlayed = new Date().toISOString();
+    updates.totalWins = totalWins + (result.isWin ? 1 : 0);
 
+    // Apply updates
     const { error: updateError } = await supabase
       .from('users')
       .update(updates)
       .eq('id', user.id);
     if (updateError) throw updateError;
 
+    // Fetch new balance
     const { data: updatedUser } = await supabase
       .from('users')
       .select('demoBalance, realBalance')
@@ -543,7 +628,10 @@ app.post("/game/auto-play", authMiddleware, async (req, res) => {
       });
     }
 
-    let newBalance = balance;
+    // Working copies that will be updated during the loop
+    let currentBalance = balance;
+    let currentGamesPlayed = user.gamesPlayed || 0;
+    let currentTotalWins = user.totalWins || 0;
     let totalStaked = 0;
     let totalWon = 0;
     let wins = 0;
@@ -551,20 +639,40 @@ app.post("/game/auto-play", authMiddleware, async (req, res) => {
 
     // Process each play
     for (let i = 0; i < count; i++) {
+      // Cap check before this game
+      const maxWinsAfterThisGame = Math.floor((currentGamesPlayed + 1) * WIN_CAP_RATIO);
+      const forcedLoss = currentTotalWins >= maxWinsAfterThisGame;
+
       const section = gameLogic.getSectionFromStake(stake);
-      let grid = gameLogic.generateGrid(section, mode);
-      grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
-      const result = gameLogic.checkForWin(grid);
+      
+      // Generate grid without triples for real mode
+      let grid;
+      if (mode === 'real') {
+        grid = gameLogic.generateGridNoWin(section, mode);
+      } else {
+        grid = gameLogic.generateGrid(section, mode);
+      }
+
+      // Apply win chance only if not forced to lose
+      let result;
+      if (!forcedLoss) {
+        grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
+        result = gameLogic.checkForWin(grid);
+      } else {
+        result = { isWin: false, winAmount: 0, matchingIndices: [] };
+      }
 
       totalStaked += stake;
       if (result.isWin) {
         totalWon += result.winAmount;
         wins++;
-        newBalance += result.winAmount;
+        currentBalance += result.winAmount;
+        currentTotalWins++;
       }
-      newBalance -= stake;
+      currentBalance -= stake;
+      currentGamesPlayed++;
 
-      // Record game (use timestamp + i to avoid duplicate IDs)
+      // Record game
       games.push({
         id: `${Date.now()}-${i}-${user.id}`,
         userId: user.id,
@@ -576,23 +684,24 @@ app.post("/game/auto-play", authMiddleware, async (req, res) => {
         scratchCount: 0,
         createdAt: new Date().toISOString(),
         matchingIndices: result.matchingIndices || [],
-        newBalance: newBalance // will be overwritten by final balance later
+        newBalance: currentBalance
       });
     }
 
     // Prepare user updates
     const updates = {};
     if (mode === 'demo') {
-      updates.demoBalance = newBalance;
+      updates.demoBalance = currentBalance;
       updates.totalStakedDemo = (user.totalStakedDemo || 0) + totalStaked;
       updates.totalWonDemo = (user.totalWonDemo || 0) + totalWon;
     } else {
-      updates.realBalance = newBalance;
+      updates.realBalance = currentBalance;
       updates.totalStakedReal = (user.totalStakedReal || 0) + totalStaked;
       updates.totalWonReal = (user.totalWonReal || 0) + totalWon;
     }
-    updates.gamesPlayed = (user.gamesPlayed || 0) + count;
+    updates.gamesPlayed = currentGamesPlayed;
     updates.lastGamePlayed = new Date().toISOString();
+    updates.totalWins = currentTotalWins;
 
     // Update user
     const { error: updateError } = await supabase
@@ -611,11 +720,11 @@ app.post("/game/auto-play", authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: `✅ Played ${count} games. Wins: ${wins}, Total win: ₦${totalWon.toLocaleString()}, Net: ₦${(totalWon - totalStaked).toLocaleString()}`,
-      newBalance,
+      newBalance: currentBalance,
       totalStaked,
       totalWon,
       wins,
-      games: games.slice(-3) // send last 3 grids for display (optional)
+      games: games.slice(-3) // send last 3 grids for display
     });
   } catch (error) {
     console.error("❌ Auto-play error:", error);
@@ -941,7 +1050,7 @@ app.get("/api/admin/users", adminMiddleware, async (req, res) => {
   try {
     const { data: users, error } = await supabaseAdmin
       .from('users')
-      .select('id, username, phone, depositTier, realBalance, demoBalance, totalStakedReal, totalWonReal, withdrawalUnlocked, bankName, lastGamePlayed, createdAt, isAdmin, referral_code');
+      .select('id, username, phone, depositTier, realBalance, demoBalance, totalStakedReal, totalWonReal, withdrawalUnlocked, bankName, lastGamePlayed, createdAt, isAdmin, referral_code, gamesPlayed, totalWins');
     if (error) throw error;
 
     const formatted = users.map(user => ({
@@ -1204,7 +1313,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
     const { notes } = req.body;
 
     // 1️⃣ Atomically update deposit status from 'pending' to 'approved'
-    //    This ensures only one approval succeeds.
     const { data: deposit, error: updateError } = await supabaseAdmin
       .from('deposits')
       .update({
