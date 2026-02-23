@@ -1498,6 +1498,40 @@ app.delete("/api/admin/users/:userId", adminMiddleware, async (req, res) => {
   }
 });
 
+// TEMPORARY DEBUG ENDPOINT - REMOVE AFTER TESTING
+app.post("/debug/test-login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    // Get user from database
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single();
+      
+    if (error || !user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+    
+    // Test password comparison
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    // Return debug info
+    res.json({
+      success: isMatch,
+      username: user.username,
+      password_hash: user.password,
+      password_attempt: password,
+      is_match: isMatch,
+      is_promoter: user.is_promoter
+    });
+  } catch (error) {
+    console.error("Debug error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ========== START SERVER ==========
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
