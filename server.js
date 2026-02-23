@@ -29,7 +29,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 // ========== WIN RATE CONFIGURATION ==========
-const WIN_CAP_RATIO = 0.05; // 5% max wins per total games played (e.g., 10 wins in 200 games)
+const WIN_CAP_RATIO = 0.05; // 5% max wins per total games played for normal users
 
 // ========== REFERRAL CODE GENERATOR ==========
 function generateReferralCode(length = 6) {
@@ -65,6 +65,8 @@ class GameLogic {
       'C': { minStake: 500, maxWin: 10000 },
       'D': { minStake: 1000, maxWin: 15000 }
     };
+    
+    // Normal probabilities (low win rate)
     this.probabilities = {
       demo: {
         'A': { winChance: 0.4, amounts: [150, 300, 450, 600, 750] },
@@ -79,6 +81,22 @@ class GameLogic {
         'D': { winChance: 0.05, amounts: [300, 500, 750, 900, 1050] }
       }
     };
+    
+    // Promoter probabilities (high win rate)
+    this.promoterProbabilities = {
+      demo: {
+        'A': { winChance: 0.9, amounts: [1500, 3000, 4050, 6000, 7050] },
+        'B': { winChance: 0.9, amounts: [3000, 6000, 9000, 10200, 10500] },
+        'C': { winChance: 0.9, amounts: [5000, 10000, 10500, 20000, 20500] },
+        'D': { winChance: 0.9, amounts: [10000, 20000, 30000, 40000, 50000] }
+      },
+      real: {
+        'A': { winChance: 0.75, amounts: [510, 1000, 1500, 3000, 4050, 6000] },
+        'B': { winChance: 0.75, amounts: [1000, 2000, 3000, 5000, 7050] },
+        'C': { winChance: 0.75, amounts: [1050, 3000, 5000, 7050, 10000] },
+        'D': { winChance: 0.75, amounts: [3000, 5000, 7050, 9000, 10050] }
+      }
+    };
   }
 
   getSectionFromStake(stake) {
@@ -88,8 +106,9 @@ class GameLogic {
     return 'A';
   }
 
-  generateGrid(section, mode = 'demo') {
-    const sectionProb = this.probabilities[mode][section];
+  generateGrid(section, mode = 'demo', isPromoter = false) {
+    const probs = isPromoter ? this.promoterProbabilities : this.probabilities;
+    const sectionProb = probs[mode][section];
     const grid = [];
     for (let i = 0; i < 9; i++) {
       grid.push(sectionProb.amounts[Math.floor(Math.random() * sectionProb.amounts.length)]);
@@ -97,9 +116,9 @@ class GameLogic {
     return grid;
   }
 
-  // Generate a grid with no three matching values (prevents natural wins)
-  generateGridNoWin(section, mode) {
-    const amounts = this.probabilities[mode][section].amounts;
+  generateGridNoWin(section, mode, isPromoter = false) {
+    const probs = isPromoter ? this.promoterProbabilities : this.probabilities;
+    const amounts = probs[mode][section].amounts;
     const maxAttempts = 100;
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -108,7 +127,6 @@ class GameLogic {
         grid.push(amounts[Math.floor(Math.random() * amounts.length)]);
       }
       
-      // Check if any value appears 3 or more times
       const counts = {};
       let hasTriple = false;
       for (let val of grid) {
@@ -122,28 +140,23 @@ class GameLogic {
       if (!hasTriple) return grid;
     }
     
-    // Fallback: manually ensure no triple by replacing duplicates
+    // Fallback
     const grid = [];
     for (let i = 0; i < 9; i++) {
       grid.push(amounts[Math.floor(Math.random() * amounts.length)]);
     }
     
-    // Fix any triple that exists
     const counts = {};
     for (let val of grid) counts[val] = (counts[val] || 0) + 1;
     
     for (let val in counts) {
       if (counts[val] >= 3) {
-        // Find indices of this value
         const indices = [];
         grid.forEach((v, idx) => { if (v == val) indices.push(idx); });
-        
-        // Replace the third occurrence with a different amount
         let newVal;
         do {
           newVal = amounts[Math.floor(Math.random() * amounts.length)];
         } while (newVal == val);
-        
         grid[indices[2]] = newVal;
         break;
       }
@@ -166,13 +179,15 @@ class GameLogic {
     return { isWin: false, winAmount: 0, matchingIndices: [] };
   }
 
-  determineWin(section, mode) {
-    return Math.random() < this.probabilities[mode][section].winChance;
+  determineWin(section, mode, isPromoter = false) {
+    const probs = isPromoter ? this.promoterProbabilities : this.probabilities;
+    return Math.random() < probs[mode][section].winChance;
   }
 
-  applyProbabilityToGrid(grid, section, mode) {
-    if (this.determineWin(section, mode)) {
-      const amounts = this.probabilities[mode][section].amounts;
+  applyProbabilityToGrid(grid, section, mode, isPromoter = false) {
+    if (this.determineWin(section, mode, isPromoter)) {
+      const probs = isPromoter ? this.promoterProbabilities : this.probabilities;
+      const amounts = probs[mode][section].amounts;
       let winAmount;
       if (mode === 'real') {
         if (Math.random() < 0.7) {
@@ -274,14 +289,15 @@ async function initializeAdminAccounts() {
         accountNumber: '',
         withdrawalUnlocked: false,
         gamesPlayed: 0,
-        totalWins: 0, // Added for win cap
+        totalWins: 0,
         isAdmin: true,
         adminRole: acc.name,
         createdAt: new Date().toISOString(),
         referral_code: referralCode,
         referred_by: null,
         referral_earnings: 0,
-        total_referral_deposits: 0
+        total_referral_deposits: 0,
+        is_promoter: false
       };
       await supabaseAdmin.from('users').insert(newAdmin);
       console.log(`✅ Created admin: ${acc.username} with referral code ${referralCode}`);
@@ -345,12 +361,13 @@ app.post("/auth/register", async (req, res) => {
       accountNumber: '',
       withdrawalUnlocked: false,
       gamesPlayed: 0,
-      totalWins: 0, // Added for win cap
+      totalWins: 0,
       createdAt: new Date().toISOString(),
       referral_code: newReferralCode,
       referred_by: referrer ? referrer.id : null,
       referral_earnings: 0,
-      total_referral_deposits: 0
+      total_referral_deposits: 0,
+      is_promoter: false
     };
 
     const { error } = await supabase.from('users').insert(user);
@@ -422,7 +439,7 @@ app.get("/user/me", authMiddleware, async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, realBalance, demoBalance, depositTier, currentBalanceMode, totalStakedReal, totalStakedDemo, totalWins')
+      .select('id, username, realBalance, demoBalance, depositTier, currentBalanceMode, totalStakedReal, totalStakedDemo, totalWins, is_promoter')
       .eq('id', req.user.id)
       .single();
     if (error || !user) return res.status(404).json({ success: false, message: "User not found" });
@@ -437,7 +454,8 @@ app.get("/user/me", authMiddleware, async (req, res) => {
         currentBalanceMode: user.currentBalanceMode || 'demo',
         totalStakedReal: user.totalStakedReal || 0,
         totalStakedDemo: user.totalStakedDemo || 0,
-        totalWins: user.totalWins || 0
+        totalWins: user.totalWins || 0,
+        isPromoter: user.is_promoter || false
       }
     });
   } catch (error) {
@@ -504,26 +522,26 @@ app.post("/game/play", authMiddleware, async (req, res) => {
     const balance = mode === 'demo' ? user.demoBalance : user.realBalance;
     if (balance < stake) return res.status(400).json({ success: false, message: `Insufficient ${mode} balance` });
 
-    // ---------- WIN CAP CHECK ----------
+    // ---------- WIN CAP CHECK (SKIP FOR PROMOTERS) ----------
     const gamesPlayed = user.gamesPlayed || 0;
     const totalWins = user.totalWins || 0;
     const maxWinsAfterThisGame = Math.floor((gamesPlayed + 1) * WIN_CAP_RATIO);
-    const forcedLoss = totalWins >= maxWinsAfterThisGame;
+    const forcedLoss = !user.is_promoter && (totalWins >= maxWinsAfterThisGame);
 
     const section = gameLogic.getSectionFromStake(stake);
 
-    // Generate a grid that initially has no triple for real mode
+    // Generate grid without triples for real mode
     let grid;
     if (mode === 'real') {
-      grid = gameLogic.generateGridNoWin(section, mode);
+      grid = gameLogic.generateGridNoWin(section, mode, user.is_promoter);
     } else {
-      grid = gameLogic.generateGrid(section, mode); // demo can keep natural wins for fun
+      grid = gameLogic.generateGrid(section, mode, user.is_promoter);
     }
 
     // Apply probability-based win only if not forced to lose
     let result;
     if (!forcedLoss) {
-      grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
+      grid = gameLogic.applyProbabilityToGrid(grid, section, mode, user.is_promoter);
       result = gameLogic.checkForWin(grid);
     } else {
       result = { isWin: false, winAmount: 0, matchingIndices: [] };
@@ -628,7 +646,7 @@ app.post("/game/auto-play", authMiddleware, async (req, res) => {
       });
     }
 
-    // Working copies that will be updated during the loop
+    // Working copies
     let currentBalance = balance;
     let currentGamesPlayed = user.gamesPlayed || 0;
     let currentTotalWins = user.totalWins || 0;
@@ -639,24 +657,24 @@ app.post("/game/auto-play", authMiddleware, async (req, res) => {
 
     // Process each play
     for (let i = 0; i < count; i++) {
-      // Cap check before this game
+      // Cap check (skip for promoters)
       const maxWinsAfterThisGame = Math.floor((currentGamesPlayed + 1) * WIN_CAP_RATIO);
-      const forcedLoss = currentTotalWins >= maxWinsAfterThisGame;
+      const forcedLoss = !user.is_promoter && (currentTotalWins >= maxWinsAfterThisGame);
 
       const section = gameLogic.getSectionFromStake(stake);
       
       // Generate grid without triples for real mode
       let grid;
       if (mode === 'real') {
-        grid = gameLogic.generateGridNoWin(section, mode);
+        grid = gameLogic.generateGridNoWin(section, mode, user.is_promoter);
       } else {
-        grid = gameLogic.generateGrid(section, mode);
+        grid = gameLogic.generateGrid(section, mode, user.is_promoter);
       }
 
       // Apply win chance only if not forced to lose
       let result;
       if (!forcedLoss) {
-        grid = gameLogic.applyProbabilityToGrid(grid, section, mode);
+        grid = gameLogic.applyProbabilityToGrid(grid, section, mode, user.is_promoter);
         result = gameLogic.checkForWin(grid);
       } else {
         result = { isWin: false, winAmount: 0, matchingIndices: [] };
@@ -724,7 +742,7 @@ app.post("/game/auto-play", authMiddleware, async (req, res) => {
       totalStaked,
       totalWon,
       wins,
-      games: games.slice(-3) // send last 3 grids for display
+      games: games.slice(-3)
     });
   } catch (error) {
     console.error("❌ Auto-play error:", error);
@@ -1050,7 +1068,7 @@ app.get("/api/admin/users", adminMiddleware, async (req, res) => {
   try {
     const { data: users, error } = await supabaseAdmin
       .from('users')
-      .select('id, username, phone, depositTier, realBalance, demoBalance, totalStakedReal, totalWonReal, withdrawalUnlocked, bankName, lastGamePlayed, createdAt, isAdmin, referral_code, gamesPlayed, totalWins');
+      .select('id, username, phone, depositTier, realBalance, demoBalance, totalStakedReal, totalWonReal, withdrawalUnlocked, bankName, lastGamePlayed, createdAt, isAdmin, referral_code, gamesPlayed, totalWins, is_promoter');
     if (error) throw error;
 
     const formatted = users.map(user => ({
@@ -1306,13 +1324,12 @@ app.get("/api/admin/deposit-requests", adminMiddleware, async (req, res) => {
   }
 });
 
-// ========== APPROVE DEPOSIT – IDEMPOTENT & ATOMIC ==========
+// ========== APPROVE DEPOSIT ==========
 app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, res) => {
   try {
     const { requestId } = req.params;
     const { notes } = req.body;
 
-    // 1️⃣ Atomically update deposit status from 'pending' to 'approved'
     const { data: deposit, error: updateError } = await supabaseAdmin
       .from('deposits')
       .update({
@@ -1321,7 +1338,7 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
         adminNotes: notes || "Approved by admin"
       })
       .eq('id', requestId)
-      .eq('status', 'pending')  // critical: only if still pending
+      .eq('status', 'pending')
       .select();
 
     if (updateError) throw updateError;
@@ -1334,7 +1351,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
 
     const approvedDeposit = deposit[0];
 
-    // 2️⃣ Get user to update balance and check referral
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -1342,7 +1358,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
       .single();
     if (userError) throw userError;
 
-    // 3️⃣ Add deposit amount to user's real balance
     const newBalance = (user.realBalance || 0) + approvedDeposit.amount;
     const { error: balanceError } = await supabaseAdmin
       .from('users')
@@ -1350,13 +1365,11 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
       .eq('id', approvedDeposit.userId);
     if (balanceError) throw balanceError;
 
-    // 4️⃣ Process referral bonus (non‑critical – won't rollback deposit)
     if (user.referred_by) {
       try {
         const commissionRate = 0.05;
         const commission = approvedDeposit.amount * commissionRate;
 
-        // Try RPC, fallback to direct updates
         const { error: rpc1Error } = await supabaseAdmin.rpc('increment_referral_stats', {
           referrer_id: user.referred_by,
           deposit_amount: approvedDeposit.amount,
@@ -1374,7 +1387,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
             .eq('id', user.referred_by);
         }
 
-        // Update referrals table
         const { error: refUpdateError } = await supabaseAdmin
           .from('referrals')
           .update({
@@ -1384,7 +1396,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
           .eq('referred_id', approvedDeposit.userId);
         if (refUpdateError) console.error('❌ referrals update error:', refUpdateError);
 
-        // Add commission to referrer's real balance
         const { error: rpc2Error } = await supabaseAdmin.rpc('add_to_user_balance', {
           user_id: user.referred_by,
           amount: commission
@@ -1399,7 +1410,6 @@ app.post("/api/admin/approve-deposit/:requestId", adminMiddleware, async (req, r
         }
       } catch (refErr) {
         console.error('❌ Referral processing error (non‑critical):', refErr);
-        // Deposit already approved – do not fail the request
       }
     }
 
@@ -1436,7 +1446,6 @@ app.post("/api/admin/reject-deposit/:requestId", adminMiddleware, async (req, re
 
 app.get("/api/admin/referral-stats", adminMiddleware, async (req, res) => {
   try {
-    // Get all users with referral codes – use correct column name "createdAt"
     const { data: users, error: usersError } = await supabaseAdmin
       .from('users')
       .select('id, username, referral_code, total_referral_deposits, referral_earnings, "createdAt"')
@@ -1447,7 +1456,6 @@ app.get("/api/admin/referral-stats", adminMiddleware, async (req, res) => {
       return res.status(500).json({ success: false, message: "Database error: " + usersError.message });
     }
 
-    // For each user, get count of referrals
     const stats = await Promise.all(users.map(async (user) => {
       const { count, error: countError } = await supabaseAdmin
         .from('referrals')
