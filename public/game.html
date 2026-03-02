@@ -642,18 +642,7 @@
     <span id="feed-text">Connecting...</span>
   </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <script>
-  // Initialize Supabase (same for all pages)
-  const supabase = supabase.createClient(
-    'https://zziqhxaofrzjhejpvjve.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
-  );
-
-  // Optional: request notification permission (not needed for game but harmless)
-  if (Notification.permission === 'default') Notification.requestPermission();
-
     // ========== CONFIGURATION ==========
     const API = window.location.origin;
     let currentUser = null;
@@ -1093,18 +1082,14 @@ function playSound(name) {
 
    async function confirmPayment() {
   const amount = state.depositTier;
-  console.log('1. Starting deposit with amount:', amount);
-  
   if (!amount) {
     alert('Please select a deposit amount');
     return;
   }
-  
   const token = localStorage.getItem('token');
   const btn = document.querySelector('#bank-screen .btn');
   btn.disabled = true;
   btn.textContent = 'PROCESSING...';
-  
   try {
     const res = await fetch(API + '/deposit/request', {
       method: 'POST',
@@ -1117,33 +1102,25 @@ function playSound(name) {
         paymentProof: 'Bank Transfer - Awaiting verification'
       })
     });
-    
     const data = await res.json();
-    console.log('2. API response:', data);
-    
     if (data.success) {
       alert(`✅ Deposit request submitted!\nAmount: ₦${amount.toLocaleString()}\nAdmin will approve.`);
-      
-      console.log('3. Current user:', currentUser);
-      console.log('4. Supabase object:', supabase);
-      
+
       // ✅ INSERT NOTIFICATION HERE
-      const insertResult = await supabase.from('admin_notifications').insert([{ 
+      await supabase.from('admin_notifications').insert([{ 
         user_id: currentUser.id,
         type: 'deposit',
         amount: amount,
         status: 'pending'
       }]);
-      
-      console.log('5. Supabase insert result:', insertResult);
-      
+
       closeScreens();
       loadUser();
     } else {
       alert(data.message);
     }
   } catch (err) {
-    console.error('❌ ERROR:', err);
+    console.error(err);
     alert('Network error');
   } finally {
     btn.disabled = false;
@@ -1344,5 +1321,18 @@ function playSound(name) {
       }
     };
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Initialize Supabase (same for all pages)
+  const supabase = supabase.createClient(
+    'https://zziqhxaofrzjhejpvjve.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
+  );
+
+  // Optional: request notification permission (not needed for game but harmless)
+  if (Notification.permission === 'default') Notification.requestPermission();
+</script>
+
 </body>
 </html>
