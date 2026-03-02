@@ -1020,39 +1020,49 @@ function playSound(name) {
       }
     }
 
-    async function submitWithdrawalRequest() {
-      const amount = document.getElementById('withdraw-amount').value.trim();
-      if (!amount || parseFloat(amount) < 1000) {
-        alert('Minimum withdrawal is ₦1,000');
-        return;
-      }
-      if (parseFloat(amount) > currentUser.balance) {
-        alert('Amount exceeds your balance');
-        return;
-      }
-      if (!confirm(`Request withdrawal of ₦${parseFloat(amount).toLocaleString()}?`)) return;
-      const token = localStorage.getItem('token');
-      try {
-        const res = await fetch(API + '/withdrawal/request', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ amount })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('✅ Withdrawal request submitted!\nAdmin will review.');
-          document.getElementById('withdraw-amount').value = '';
-        } else {
-          alert(data.message);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Network error');
-      }
+   async function submitWithdrawalRequest() {
+  const amount = document.getElementById('withdraw-amount').value.trim();
+  if (!amount || parseFloat(amount) < 1000) {
+    alert('Minimum withdrawal is ₦1,000');
+    return;
+  }
+  if (parseFloat(amount) > currentUser.balance) {
+    alert('Amount exceeds your balance');
+    return;
+  }
+  if (!confirm(`Request withdrawal of ₦${parseFloat(amount).toLocaleString()}?`)) return;
+
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(API + '/withdrawal/request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ amount })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Withdrawal request submitted!\nAdmin will review.');
+      document.getElementById('withdraw-amount').value = '';
+
+      // ✅ Insert notification only after successful API call
+      await supabase.from('admin_notifications').insert([{ 
+        user_id: currentUser.id,
+        type: 'withdrawal',
+        amount: parseFloat(amount),   // 👈 fixed: use parseFloat(amount)
+        status: 'pending'
+      }]);
+
+    } else {
+      alert(data.message);
     }
+  } catch (err) {
+    console.error(err);
+    alert('Network error');
+  }
+}
 
     // ========== DEPOSIT ==========
     function showBank(amount) {
@@ -1070,44 +1080,53 @@ function playSound(name) {
       bankScreen.classList.add('visible');
     }
 
-    async function confirmPayment() {
-      const amount = state.depositTier;
-      if (!amount) {
-        alert('Please select a deposit amount');
-        return;
-      }
-      const token = localStorage.getItem('token');
-      const btn = document.querySelector('#bank-screen .btn');
-      btn.disabled = true;
-      btn.textContent = 'PROCESSING...';
-      try {
-        const res = await fetch(API + '/deposit/request', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            amount,
-            paymentProof: 'Bank Transfer - Awaiting verification'
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert(`✅ Deposit request submitted!\nAmount: ₦${amount.toLocaleString()}\nAdmin will approve.`);
-          closeScreens();
-          loadUser();
-        } else {
-          alert(data.message);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Network error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'I HAVE PAID';
-      }
+   async function confirmPayment() {
+  const amount = state.depositTier;
+  if (!amount) {
+    alert('Please select a deposit amount');
+    return;
+  }
+  const token = localStorage.getItem('token');
+  const btn = document.querySelector('#bank-screen .btn');
+  btn.disabled = true;
+  btn.textContent = 'PROCESSING...';
+  try {
+    const res = await fetch(API + '/deposit/request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        amount,
+        paymentProof: 'Bank Transfer - Awaiting verification'
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Deposit request submitted!\nAmount: ₦${amount.toLocaleString()}\nAdmin will approve.`);
+
+      // ✅ INSERT NOTIFICATION HERE
+      await supabase.from('admin_notifications').insert([{ 
+        user_id: currentUser.id,
+        type: 'deposit',
+        amount: amount,
+        status: 'pending'
+      }]);
+
+      closeScreens();
+      loadUser();
+    } else {
+      alert(data.message);
     }
+  } catch (err) {
+    console.error(err);
+    alert('Network error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'I HAVE PAID';
+  }
+}
 
     // ========== REFERRAL ==========
     async function showReferralModal() {
@@ -1302,5 +1321,18 @@ function playSound(name) {
       }
     };
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Initialize Supabase (same for all pages)
+  const supabase = supabase.createClient(
+    'https://zziqhxaofrzjhejpvjve.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
+  );
+
+  // Optional: request notification permission (not needed for game but harmless)
+  if (Notification.permission === 'default') Notification.requestPermission();
+</script>
+
 </body>
 </html>
