@@ -34,9 +34,10 @@
         </button>
     </div>
 
+    <!-- Pending Transactions box (static for now – will not auto-update) -->
     <div style="background: yellow; padding: 10px;">
-  Pending Transactions: <span id="notifCount">0</span>
-</div>
+        Pending Transactions: <span id="notifCount">0</span>
+    </div>
     
     <div class="container">
         <div class="tabs">
@@ -585,39 +586,19 @@
                 alert("Failed to mark as paid");
             }
         }
-        
+
+        setInterval(async () => {
+  const res = await fetch(API + '/api/admin/pending-count', { headers: adminHeaders });
+  const data = await res.json();
+  if (data.success) document.getElementById('notifCount').innerText = data.count;
+}, 5000);
+
         // ========== INITIAL LOAD ==========
         window.onload = function() {
             loadUsers();
         };
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  // Use YOUR actual anon key and URL
- const supabase = supabase.createClient(
-  'https://zziqhxaofrzjhejpvjve.supabase.co',  // ✅ Must be correct
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
-);
-
-  // Request permission for browser notifications
-  if (Notification.permission === 'default') Notification.requestPermission();
-
-  // Check for new pending transactions every 5 seconds
-  setInterval(async () => {
-    const { data } = await supabase
-      .from('admin_notifications')
-      .select('*')
-      .eq('is_read', false);
-      
-    if (data?.length) {
-      document.getElementById('notifCount').innerText = data.length;
-      if (Notification.permission === 'granted') {
-        new Notification(data.length + ' transaction(s) pending');
-      }
-    }
-  }, 5000);
-</script>
-
+    <!-- Removed Supabase script – notifications now handled by backend -->
 </body>
 </html>

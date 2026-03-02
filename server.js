@@ -6,6 +6,9 @@ const bcrypt = require("bcryptjs");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config();
 
+// ✅ Import the notification utility (assumes notify.js is in same folder)
+const addNotification = require('./notify');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -852,6 +855,9 @@ app.post("/deposit/request", authMiddleware, async (req, res) => {
     const { error } = await supabase.from('deposits').insert(deposit);
     if (error) throw error;
 
+    // ✅ Notify admin
+    await addNotification(req.user.id, 'deposit', parseFloat(amount));
+
     res.json({
       success: true,
       message: "Deposit request submitted. Admin will review.",
@@ -966,6 +972,9 @@ app.post("/withdrawal/request", authMiddleware, async (req, res) => {
 
     const { error } = await supabase.from('withdrawals').insert(withdrawal);
     if (error) throw error;
+
+    // ✅ Notify admin
+    await addNotification(req.user.id, 'withdrawal', amountNum);
 
     res.json({
       success: true,
@@ -1495,6 +1504,19 @@ app.delete("/api/admin/users/:userId", adminMiddleware, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+app.get("/api/admin/pending-count", adminMiddleware, async (req, res) => {
+  try {
+    const { count, error } = await supabaseAdmin
+      .from('admin_notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    if (error) throw error;
+    res.json({ success: true, count });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
