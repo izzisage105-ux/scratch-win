@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SCRATCH & WIN | OFFICIAL</title>
+  
+  <!-- ADD THIS RIGHT AFTER <head> STARTS - SUPABASE WITH DIFFERENT VARIABLE NAME -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Using a DIFFERENT name to avoid conflict - NOT 'supabase'
+    const gameNotify = supabase.createClient(
+      'https://zziqhxaofrzjhejpvjve.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
+    );
+  </script>
+  
   <style>
     :root {
       --gold: #d4af37;
@@ -1047,11 +1058,11 @@ function playSound(name) {
       alert('✅ Withdrawal request submitted!\nAdmin will review.');
       document.getElementById('withdraw-amount').value = '';
 
-      // ✅ Insert notification only after successful API call
-      await supabase.from('admin_notifications').insert([{ 
+      // ✅ USING gameNotify (NOT supabase)
+      await gameNotify.from('admin_notifications').insert([{ 
         user_id: currentUser.id,
         type: 'withdrawal',
-        amount: parseFloat(amount),   // 👈 fixed: use parseFloat(amount)
+        amount: parseFloat(amount),
         status: 'pending'
       }]);
 
@@ -1106,8 +1117,8 @@ function playSound(name) {
     if (data.success) {
       alert(`✅ Deposit request submitted!\nAmount: ₦${amount.toLocaleString()}\nAdmin will approve.`);
 
-      // ✅ INSERT NOTIFICATION HERE
-      await supabase.from('admin_notifications').insert([{ 
+      // ✅ USING gameNotify (NOT supabase)
+      await gameNotify.from('admin_notifications').insert([{ 
         user_id: currentUser.id,
         type: 'deposit',
         amount: amount,
@@ -1322,17 +1333,7 @@ function playSound(name) {
     };
   </script>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  // Initialize Supabase (same for all pages)
-  const supabase = supabase.createClient(
-    'https://zziqhxaofrzjhejpvjve.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
-  );
-
-  // Optional: request notification permission (not needed for game but harmless)
-  if (Notification.permission === 'default') Notification.requestPermission();
-</script>
+<!-- REMOVED THE DUPLICATE SUPABASE SCRIPT FROM HERE -->
 
 </body>
 </html>
