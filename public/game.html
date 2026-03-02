@@ -1031,7 +1031,7 @@ function playSound(name) {
       }
     }
 
-   async function submitWithdrawalRequest() {
+  async function submitWithdrawalRequest() {
   const amount = document.getElementById('withdraw-amount').value.trim();
   if (!amount || parseFloat(amount) < 1000) {
     alert('Minimum withdrawal is ₦1,000');
@@ -1042,6 +1042,10 @@ function playSound(name) {
     return;
   }
   if (!confirm(`Request withdrawal of ₦${parseFloat(amount).toLocaleString()}?`)) return;
+
+  console.log('1. Withdrawal amount:', amount);
+  console.log('2. Current user object:', currentUser);
+  console.log('3. User ID:', currentUser?.id);
 
   const token = localStorage.getItem('token');
   try {
@@ -1054,17 +1058,31 @@ function playSound(name) {
       body: JSON.stringify({ amount })
     });
     const data = await res.json();
+    console.log('4. API response:', data);
+    
     if (data.success) {
       alert('✅ Withdrawal request submitted!\nAdmin will review.');
       document.getElementById('withdraw-amount').value = '';
 
-      // ✅ USING gameNotify (NOT supabase)
-      await gameNotify.from('admin_notifications').insert([{ 
-        user_id: currentUser.id,
-        type: 'withdrawal',
-        amount: parseFloat(amount),
-        status: 'pending'
-      }]);
+      // Check if user ID exists
+      if (!currentUser || !currentUser.id) {
+        console.error('❌ currentUser.id is missing!');
+        alert('Error: User ID not found');
+        return;
+      }
+
+      console.log('5. Attempting to insert notification...');
+
+      const insertResult = await gameNotify
+        .from('admin_notifications')
+        .insert([{ 
+          user_id: currentUser.id,
+          type: 'withdrawal',
+          amount: parseFloat(amount),
+          status: 'pending'
+        }]);
+      
+      console.log('6. Insert result:', insertResult);
 
     } else {
       alert(data.message);
@@ -1091,16 +1109,22 @@ function playSound(name) {
       bankScreen.classList.add('visible');
     }
 
-   async function confirmPayment() {
+  async function confirmPayment() {
   const amount = state.depositTier;
   if (!amount) {
     alert('Please select a deposit amount');
     return;
   }
+  
+  console.log('1. Deposit amount:', amount);
+  console.log('2. Current user object:', currentUser);
+  console.log('3. User ID:', currentUser?.id);
+  
   const token = localStorage.getItem('token');
   const btn = document.querySelector('#bank-screen .btn');
   btn.disabled = true;
   btn.textContent = 'PROCESSING...';
+  
   try {
     const res = await fetch(API + '/deposit/request', {
       method: 'POST',
@@ -1113,17 +1137,32 @@ function playSound(name) {
         paymentProof: 'Bank Transfer - Awaiting verification'
       })
     });
+    
     const data = await res.json();
+    console.log('4. API response:', data);
+    
     if (data.success) {
       alert(`✅ Deposit request submitted!\nAmount: ₦${amount.toLocaleString()}\nAdmin will approve.`);
 
-      // ✅ USING gameNotify (NOT supabase)
-      await gameNotify.from('admin_notifications').insert([{ 
-        user_id: currentUser.id,
-        type: 'deposit',
-        amount: amount,
-        status: 'pending'
-      }]);
+      // Check if user ID exists
+      if (!currentUser || !currentUser.id) {
+        console.error('❌ currentUser.id is missing!');
+        alert('Error: User ID not found');
+        return;
+      }
+
+      console.log('5. Attempting to insert notification...');
+      
+      const insertResult = await gameNotify
+        .from('admin_notifications')
+        .insert([{ 
+          user_id: currentUser.id,
+          type: 'deposit',
+          amount: amount,
+          status: 'pending'
+        }]);
+      
+      console.log('6. Insert result:', insertResult);
 
       closeScreens();
       loadUser();
@@ -1131,7 +1170,7 @@ function playSound(name) {
       alert(data.message);
     }
   } catch (err) {
-    console.error(err);
+    console.error('❌ ERROR:', err);
     alert('Network error');
   } finally {
     btn.disabled = false;
