@@ -595,10 +595,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   // Use YOUR actual anon key and URL
-  const supabase = supabase.createClient(
-    'https://zziqhxaofrzjhejpvjve.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
-  );
+ const supabase = supabase.createClient(
+  'https://zziqhxaofrzjhejpvjve.supabase.co',  // ✅ Must be correct
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aXFoeGFvZnJ6amhlanB2anZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4ODEwMjAsImV4cCI6MjA4NjQ1NzAyMH0.A_Taq38rb3i_4mG71b4F1cFBiwW95BWVvcUKPD_w0y8'
+);
 
   // Request permission for browser notifications
   if (Notification.permission === 'default') Notification.requestPermission();
