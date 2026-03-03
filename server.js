@@ -32,7 +32,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 // ========== WIN RATE CONFIGURATION ==========
-const WIN_CAP_RATIO = 0.10; // 10% max wins per total games played for normal users
+const WIN_CAP_RATIO = 0.20; // 10% max wins per total games played for normal users
 
 // ========== REFERRAL CODE GENERATOR ==========
 function generateReferralCode(length = 6) {
