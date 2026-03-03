@@ -72,16 +72,16 @@ class GameLogic {
     // Normal probabilities (low win rate)
     this.probabilities = {
       demo: {
-        'A': { winChance: 0.8, amounts: [150, 300, 450, 600, 750] },
-        'B': { winChance: 0.8, amounts: [300, 600, 900, 1200, 1500] },
-        'C': { winChance: 0.8, amounts: [500, 1000, 1500, 2000, 2500] },
-        'D': { winChance: 0.8, amounts: [1000, 2000, 3000, 4000, 5000] }
+        'A': { winChance: 0.95, amounts: [150, 300, 450, 600, 750] },
+        'B': { winChance: 0.95, amounts: [300, 600, 900, 1200, 1500] },
+        'C': { winChance: 0.95, amounts: [500, 1000, 1500, 2000, 2500] },
+        'D': { winChance: 0.95, amounts: [1000, 2000, 3000, 4000, 5000] }
       },
       real: {
-        'A': { winChance: 0.1, amounts: [50, 100, 150, 300, 450, 600] },
-        'B': { winChance: 0.1, amounts: [100, 200, 300, 500, 750] },
-        'C': { winChance: 0.1, amounts: [150, 300, 500, 750, 1000] },
-        'D': { winChance: 0.1, amounts: [300, 500, 750, 900, 1050] }
+        'A': { winChance: 0.2, amounts: [50, 100, 150, 300, 450, 600] },
+        'B': { winChance: 0.2, amounts: [100, 200, 300, 500, 750] },
+        'C': { winChance: 0.2, amounts: [150, 300, 500, 750, 1000] },
+        'D': { winChance: 0.2, amounts: [300, 500, 750, 900, 1050] }
       }
     };
     
