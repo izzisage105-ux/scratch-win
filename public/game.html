@@ -46,6 +46,8 @@
       align-items: center;
       margin-bottom: 10px;
       position: relative;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
     .logo {
@@ -56,20 +58,26 @@
 
     .header-buttons {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     .dep-btn {
       background: var(--gold);
       color: black;
       border: none;
-      padding: 8px 15px;
+      padding: 8px 12px;
       border-radius: 6px;
       font-weight: bold;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       transition: 0.2s;
+    }
+
+    .dep-btn.lobby-btn {
+      background: #2196f3;
+      color: white;
     }
 
     .dep-btn:hover {
@@ -81,10 +89,10 @@
       background: transparent;
       border: 1px solid var(--gold);
       color: white;
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      font-size: 20px;
+      font-size: 18px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -97,15 +105,16 @@
       justify-content: center;
       gap: 15px;
       margin-top: 10px;
+      flex-wrap: wrap;
     }
 
     .bal-card {
       background: var(--glass);
-      padding: 12px 20px;
+      padding: 10px 16px;
       border: 1px solid var(--gold);
       border-radius: 16px;
       cursor: pointer;
-      min-width: 140px;
+      min-width: 120px;
       text-align: center;
       transition: 0.3s;
     }
@@ -118,18 +127,18 @@
     }
 
     .username-tag {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--gold);
       text-align: center;
-      margin: 10px 0 0;
+      margin: 8px 0 0;
     }
 
     /* Stake Selector */
     .tier-selector {
       display: flex;
       overflow-x: auto;
-      gap: 10px;
-      padding: 15px;
+      gap: 8px;
+      padding: 12px;
       scrollbar-width: none;
     }
 
@@ -141,11 +150,12 @@
       background: var(--light-purple);
       border: 1px solid var(--gold);
       color: white;
-      padding: 10px 25px;
+      padding: 8px 18px;
       border-radius: 30px;
       white-space: nowrap;
       cursor: pointer;
       font-weight: bold;
+      font-size: 13px;
       transition: 0.2s;
     }
 
@@ -188,10 +198,10 @@
     .grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      max-width: 360px;
+      gap: 10px;
+      max-width: 340px;
       margin: 20px auto;
-      padding: 15px;
+      padding: 12px;
       background: var(--light-purple);
       border-radius: 20px;
       border: 2px solid var(--gold);
@@ -234,20 +244,20 @@
     }
 
     .reveal-content .naira-icon {
-      font-size: 28px;
+      font-size: 24px;
       font-weight: bold;
       color: var(--green);
     }
 
     .reveal-content .amt {
       font-weight: bold;
-      font-size: 14px;
+      font-size: 13px;
       color: #333;
     }
 
     .win-badge {
       color: green;
-      font-size: 10px;
+      font-size: 9px;
       margin-top: 2px;
     }
 
@@ -256,7 +266,7 @@
       background: var(--green);
       color: white;
       border: none;
-      padding: 16px;
+      padding: 14px;
       border-radius: 12px;
       font-weight: bold;
       cursor: pointer;
@@ -264,7 +274,7 @@
       max-width: 350px;
       margin: 10px auto;
       display: block;
-      font-size: 16px;
+      font-size: 15px;
       transition: 0.2s;
     }
 
@@ -286,7 +296,7 @@
     /* Forms */
     .form-section {
       margin: 30px auto;
-      padding: 25px;
+      padding: 20px;
       background: rgba(0,0,0,0.4);
       max-width: 380px;
       border-radius: 20px;
@@ -295,8 +305,8 @@
 
     .input-field, select {
       width: 100%;
-      padding: 14px;
-      margin-bottom: 15px;
+      padding: 12px;
+      margin-bottom: 12px;
       border-radius: 10px;
       border: none;
       display: block;
@@ -327,7 +337,7 @@
     .content-card {
       background: white;
       color: black;
-      padding: 30px;
+      padding: 25px;
       border-radius: 24px;
       width: 95%;
       max-width: 380px;
@@ -369,13 +379,13 @@
     #live-feed {
       background: rgba(0,0,0,0.95);
       border-top: 2px solid var(--gold);
-      padding: 14px;
+      padding: 10px;
       position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
       z-index: 1500;
-      font-size: 14px;
+      font-size: 12px;
       text-align: center;
       color: var(--gold);
     }
@@ -383,11 +393,11 @@
     /* Floating Action Buttons */
     .floating-buttons {
       position: fixed;
-      bottom: 80px;
-      right: 20px;
+      bottom: 70px;
+      right: 12px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       z-index: 1600;
     }
 
@@ -395,14 +405,14 @@
       background: var(--light-purple);
       color: white;
       border: 1px solid var(--gold);
-      padding: 12px 16px;
+      padding: 8px 12px;
       border-radius: 30px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: bold;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
       transition: 0.2s;
     }
@@ -433,6 +443,20 @@
     hr {
       border-color: #555;
       margin: 20px 0;
+    }
+
+    @media (max-width: 500px) {
+      .header-buttons .dep-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+      .bal-card {
+        min-width: 100px;
+        padding: 8px 12px;
+      }
+      .logo {
+        font-size: 1.2rem;
+      }
     }
   </style>
 </head>
@@ -509,11 +533,12 @@
   <!-- HEADER -->
   <div class="header">
     <div class="top-bar">
-      <h2 class="logo">SCRATCH & WIN</h2>
+      <h2 class="logo">🎮 SCRATCH & WIN</h2>
       <div class="header-buttons">
-        <button class="dep-btn" onclick="showReferralModal()">🔗 Refer & Earn</button>
-        <button class="dep-btn" onclick="openAutoModal()">⚡ AUTO</button>
-        <button class="dep-btn" onclick="document.getElementById('deposit-screen').classList.add('visible')">+ DEPOSIT</button>
+        <button class="dep-btn lobby-btn" onclick="window.location.href='index.html'">🏠 Lobby</button>
+        <button class="dep-btn" onclick="showReferralModal()">🔗 Refer</button>
+        <button class="dep-btn" onclick="openAutoModal()">⚡ Auto</button>
+        <button class="dep-btn" onclick="document.getElementById('deposit-screen').classList.add('visible')">💰 Deposit</button>
         <button id="mute-btn">🔊</button>
       </div>
     </div>
@@ -536,10 +561,10 @@
 
   <!-- STAKE SELECTOR -->
   <div class="tier-selector">
-    <button class="tier-btn active" onclick="setTier(150, this)">₦150 Stake</button>
-    <button class="tier-btn" onclick="setTier(300, this)">₦300 Stake</button>
-    <button class="tier-btn" onclick="setTier(500, this)">₦500 Stake</button>
-    <button class="tier-btn" onclick="setTier(1000, this)">₦1000 Stake</button>
+    <button class="tier-btn active" onclick="setTier(150, this)">₦150</button>
+    <button class="tier-btn" onclick="setTier(300, this)">₦300</button>
+    <button class="tier-btn" onclick="setTier(500, this)">₦500</button>
+    <button class="tier-btn" onclick="setTier(1000, this)">₦1000</button>
   </div>
 
   <!-- GAUGE -->
@@ -625,13 +650,13 @@
   <!-- FLOATING HISTORY BUTTONS -->
   <div class="floating-buttons">
     <button class="floating-btn" onclick="window.location.href='deposit-history.html'">
-      📥 Deposit History
+      📥 Deposit
     </button>
     <button class="floating-btn" onclick="window.location.href='withdrawal-history.html'">
-      📤 Withdrawal History
+      📤 Withdrawal
     </button>
     <button class="floating-btn" onclick="window.location.href='game-history.html'">
-      🎮 Game History
+      🎮 History
     </button>
     <button class="floating-btn logout-btn" onclick="logout()">
       🚪 Logout

@@ -6,12 +6,15 @@
     <title>Crash Game - Scratch & Win</title>
     <style>
         :root { --gold: #d4af37; --deep-purple: #1a0033; --green: #008751; --red: #dc3545; }
-        body { background: var(--deep-purple); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        .game-container { max-width: 600px; margin: 0 auto; text-align: center; }
+        body { background: var(--deep-purple); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; min-height: 100vh; }
+        .nav-bar { background: rgba(0,0,0,0.9); padding: 15px; margin-bottom: 20px; border-radius: 8px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .nav-link { color: var(--gold); text-decoration: none; padding: 8px 16px; border-radius: 8px; }
+        .nav-link:hover, .nav-link.active { background: rgba(212,175,55,0.3); }
+        .game-container { max-width: 600px; margin: 0 auto; text-align: center; background: rgba(0,0,0,0.5); border-radius: 20px; padding: 20px; border: 1px solid var(--gold); }
         .multiplier-box { background: #000; border-radius: 20px; padding: 40px; margin: 20px 0; border: 2px solid var(--gold); }
         .multiplier { font-size: 72px; font-weight: bold; color: var(--gold); }
         .multiplier.crashed { color: var(--red); }
-        .bet-controls { display: flex; gap: 10px; justify-content: center; margin: 20px 0; }
+        .bet-controls { display: flex; gap: 10px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
         .bet-input { padding: 12px; font-size: 16px; border-radius: 8px; border: none; width: 150px; }
         .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
         .btn-crash { background: var(--green); color: white; }
@@ -19,12 +22,17 @@
         .btn-cashout { background: var(--gold); color: black; }
         .balance { background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; margin: 20px 0; }
         .promoter-badge { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #1a0033; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-left: 10px; }
-        .nav-bar { background: rgba(0,0,0,0.9); padding: 15px; margin-bottom: 20px; border-radius: 8px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
-        .nav-link { color: var(--gold); text-decoration: none; padding: 8px 16px; border-radius: 8px; }
-        .nav-link:hover { background: rgba(212,175,55,0.2); }
         .history { margin-top: 30px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; }
         .history-item { display: inline-block; padding: 5px 10px; margin: 3px; background: #333; border-radius: 4px; font-size: 12px; }
         .history-item.crashed { background: var(--red); }
+        
+        /* WIN POPUP */
+        .win-popup { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; justify-content: center; align-items: center; }
+        .win-popup-content { background: linear-gradient(135deg, #1a0033, #330066); border: 3px solid #d4af37; border-radius: 30px; padding: 40px; text-align: center; max-width: 400px; margin: auto; animation: popIn 0.5s ease; }
+        .win-popup-content h2 { color: #d4af37; font-size: 36px; margin: 0; }
+        .win-amount { font-size: 48px; color: gold; font-weight: bold; margin: 20px 0; }
+        .win-close { background: #d4af37; color: black; border: none; padding: 12px 30px; border-radius: 40px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -63,6 +71,16 @@
         </div>
     </div>
 
+    <!-- WIN POPUP -->
+    <div id="win-popup" class="win-popup">
+        <div class="win-popup-content">
+            <div style="font-size: 80px; margin-bottom: 20px;">🎉</div>
+            <h2>YOU WON!</h2>
+            <div class="win-amount">₦<span id="win-amount">0</span></div>
+            <button class="win-close" onclick="closeWinPopup()">CONTINUE →</button>
+        </div>
+    </div>
+
     <script>
         const API = window.location.origin;
         let currentUser = null;
@@ -72,6 +90,16 @@
         let gameInterval = null;
         let crashHistory = [];
         let isPromoter = false;
+
+        function showWinPopup(amount) {
+            document.getElementById('win-amount').innerText = amount.toLocaleString();
+            document.getElementById('win-popup').style.display = 'flex';
+            setTimeout(closeWinPopup, 3000);
+        }
+        
+        function closeWinPopup() {
+            document.getElementById('win-popup').style.display = 'none';
+        }
 
         async function loadUser() {
             const token = localStorage.getItem('token');
@@ -96,20 +124,47 @@
             currentBet = betAmount;
             updateMultiplierDisplay();
 
-            // 🎯 PROMOTER LOGIC: Higher crash point (5x to 50x) vs normal (1x to 11x)
+            // 🎯 NEW CRASH LOGIC:
+            // Most crashes between 1.01x and 1.50x
+            // Rarely goes above 2.00x, very rare above 3.00x
+            
             let crashPoint;
-            if (isPromoter) {
-                crashPoint = Math.random() * 45 + 5;  // 5x to 50x
+            const random = Math.random();
+            
+            if (random < 0.60) {
+                // 60% of games: crash between 1.01x and 1.30x
+                crashPoint = 1.01 + Math.random() * 0.29;
+            } else if (random < 0.85) {
+                // 25% of games: crash between 1.31x and 1.80x
+                crashPoint = 1.31 + Math.random() * 0.49;
+            } else if (random < 0.95) {
+                // 10% of games: crash between 1.81x and 2.50x
+                crashPoint = 1.81 + Math.random() * 0.69;
+            } else if (random < 0.98) {
+                // 3% of games: crash between 2.51x and 3.50x
+                crashPoint = 2.51 + Math.random() * 0.99;
             } else {
-                crashPoint = Math.random() < 0.3 ? Math.random() * 3 + 1 : Math.random() * 7 + 4; // 1x to 11x
+                // 2% of games: crash between 3.51x and 5.00x (rare big wins)
+                crashPoint = 3.51 + Math.random() * 1.49;
+            }
+            
+            // Promoters get better odds (less likely to crash early)
+            if (isPromoter) {
+                const promoterBoost = Math.random();
+                if (promoterBoost < 0.7) {
+                    // 70% of promoter games go above 2x
+                    crashPoint = Math.max(crashPoint, 1.8 + Math.random() * 2.2);
+                }
             }
             
             gameInterval = setInterval(() => {
                 if (!gameActive) return;
-                currentMultiplier += 0.02;
+                currentMultiplier += 0.01;
                 updateMultiplierDisplay();
-                if (currentMultiplier >= crashPoint) { crashGame(); }
-            }, 100);
+                if (currentMultiplier >= crashPoint) {
+                    crashGame();
+                }
+            }, 50); // Faster updates for smoother animation
         }
 
         async function crashGame() {
@@ -149,6 +204,9 @@
             await loadUser();
             crashHistory.unshift({ multiplier: currentMultiplier.toFixed(2), crashed: false, win: winAmount });
             updateHistory();
+            
+            // 🎉 Show win popup for every win
+            if (winAmount > 0) showWinPopup(winAmount);
         }
 
         function updateMultiplierDisplay() { document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x'; }

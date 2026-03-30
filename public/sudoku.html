@@ -37,6 +37,15 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: var(--deep-purple); border: 2px solid var(--gold); border-radius: 20px; padding: 30px; text-align: center; max-width: 400px; width: 90%; }
         .prize-amount { font-size: 48px; color: var(--gold); font-weight: bold; margin: 20px 0; }
+        
+        /* WIN POPUP */
+        .win-popup { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; justify-content: center; align-items: center; }
+        .win-popup-content { background: linear-gradient(135deg, #1a0033, #330066); border: 3px solid #d4af37; border-radius: 30px; padding: 40px; text-align: center; max-width: 400px; margin: auto; animation: popIn 0.5s ease; }
+        .win-popup-content h2 { color: #d4af37; font-size: 36px; margin: 0; }
+        .win-amount { font-size: 48px; color: gold; font-weight: bold; margin: 20px 0; }
+        .win-close { background: #d4af37; color: black; border: none; padding: 12px 30px; border-radius: 40px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
         @media (max-width: 600px) { .cell { font-size: 14px; } .num-btn { padding: 8px; font-size: 16px; } }
     </style>
 </head>
@@ -60,14 +69,18 @@
             <div class="stat"><div class="stat-label">Time</div><div class="stat-value" id="timer">00:00</div></div>
             <div class="stat"><div class="stat-label">Mistakes</div><div class="stat-value" id="mistakes">0/<span id="max-mistakes">3</span></div></div>
         </div>
+        
         <div class="difficulty-selector">
             <button class="difficulty-btn easy" data-diff="easy">🟢 Easy</button>
             <button class="difficulty-btn medium" data-diff="medium">🟠 Medium</button>
             <button class="difficulty-btn hard" data-diff="hard">🔴 Hard</button>
             <button class="difficulty-btn expert" data-diff="expert">⚫ Expert</button>
         </div>
+        
         <div class="sudoku-grid" id="sudoku-grid"></div>
+        
         <div class="number-pad" id="number-pad"></div>
+        
         <div class="action-buttons">
             <button class="btn btn-secondary" id="hint-btn">💡 Hint (<span id="hint-cost">50</span>)</button>
             <button class="btn btn-primary" id="check-btn">✓ Check Solution</button>
@@ -75,17 +88,46 @@
             <button class="btn btn-secondary" id="new-game-btn">🎲 New Game</button>
         </div>
     </div>
-    <div id="result-modal" class="modal"><div class="modal-content"><h2 id="result-title"></h2><div id="result-message"></div><div class="prize-amount" id="prize-amount"></div><button class="btn btn-primary" id="modal-close">Play Again</button></div></div>
+
+    <!-- WIN POPUP -->
+    <div id="win-popup" class="win-popup">
+        <div class="win-popup-content">
+            <div style="font-size: 80px; margin-bottom: 20px;">🎉</div>
+            <h2>YOU WON!</h2>
+            <div class="win-amount">₦<span id="win-amount">0</span></div>
+            <button class="win-close" onclick="closeWinPopup()">CONTINUE →</button>
+        </div>
+    </div>
+    
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="result-title"></h2>
+            <div id="result-message"></div>
+            <div class="prize-amount" id="prize-amount"></div>
+            <button class="btn btn-primary" id="modal-close">Play Again</button>
+        </div>
+    </div>
 
     <script>
         const API = window.location.origin;
         let currentUser = null, isPromoter = false, gameActive = false, currentPuzzle = null, currentSolution = null, userGrid = null, selectedCell = null, mistakes = 0, timerSeconds = 0, timerInterval = null, currentDifficulty = 'easy';
+        
         const difficultySettings = {
             easy: { entryFee: 100, basePrize: 150, maxMistakes: 5, timeBonusMultiplier: 1.5, hintCost: 20 },
             medium: { entryFee: 200, basePrize: 350, maxMistakes: 4, timeBonusMultiplier: 1.3, hintCost: 50 },
             hard: { entryFee: 500, basePrize: 1000, maxMistakes: 3, timeBonusMultiplier: 1.2, hintCost: 100 },
             expert: { entryFee: 1000, basePrize: 2500, maxMistakes: 2, timeBonusMultiplier: 1.1, hintCost: 200 }
         };
+        
+        function showWinPopup(amount) {
+            document.getElementById('win-amount').innerText = amount.toLocaleString();
+            document.getElementById('win-popup').style.display = 'flex';
+            setTimeout(closeWinPopup, 3000);
+        }
+        
+        function closeWinPopup() {
+            document.getElementById('win-popup').style.display = 'none';
+        }
         
         async function loadUser() {
             const token = localStorage.getItem('token');
@@ -157,7 +199,6 @@
             if (isWin) {
                 const settings = difficultySettings[currentDifficulty];
                 const timeBonus = Math.max(0, 1 - (timerSeconds / 600));
-                // 🎯 PROMOTER LOGIC: 2x prize multiplier
                 const promoterMultiplier = isPromoter ? 2.0 : 1.0;
                 prize = Math.floor(settings.basePrize * (1 + timeBonus * settings.timeBonusMultiplier) * promoterMultiplier);
                 const token = localStorage.getItem('token');
@@ -166,6 +207,8 @@
                     body: JSON.stringify({ prize, difficulty: currentDifficulty, time: timerSeconds })
                 });
                 await loadUser();
+                // 🎉 Show win popup for every win
+                if (prize > 0) showWinPopup(prize);
             }
             document.getElementById('result-title').innerHTML = isWin ? '🎉 VICTORY! 🎉' : '💀 GAME OVER 💀';
             document.getElementById('result-message').innerHTML = message || (isWin ? `You completed in ${Math.floor(timerSeconds/60)}:${(timerSeconds%60).toString().padStart(2,'0')}!` : 'Better luck next time!');
@@ -224,6 +267,7 @@
         document.getElementById('reset-btn').onclick = () => { userGrid = JSON.parse(JSON.stringify(currentPuzzle)); mistakes = 0; renderGrid(); };
         document.getElementById('check-btn').onclick = () => { if (checkCompletion()) endGame(true, 'Puzzle completed!'); else alert('Puzzle not complete yet.'); };
         document.getElementById('modal-close').onclick = () => { document.getElementById('result-modal').style.display = 'none'; newGame(); };
+        
         async function init() { await loadUser(); initNumberPad(); initDifficulty(); newGame(); }
         init();
     </script>

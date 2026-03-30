@@ -216,6 +216,60 @@
             margin: 20px 0;
         }
         
+        /* WIN POPUP */
+        .win-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .win-popup-content {
+            background: linear-gradient(135deg, #1a0033, #330066);
+            border: 3px solid #d4af37;
+            border-radius: 30px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            margin: auto;
+            animation: popIn 0.5s ease;
+        }
+        
+        .win-popup-content h2 {
+            color: #d4af37;
+            font-size: 36px;
+            margin: 0;
+        }
+        
+        .win-amount {
+            font-size: 48px;
+            color: gold;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        .win-close {
+            background: #d4af37;
+            color: black;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -280,12 +334,32 @@
         </div>
     </div>
 
+    <!-- WIN POPUP -->
+    <div id="win-popup" class="win-popup">
+        <div class="win-popup-content">
+            <div style="font-size: 80px; margin-bottom: 20px;">🎉</div>
+            <h2>YOU WON!</h2>
+            <div class="win-amount">₦<span id="win-amount">0</span></div>
+            <button class="win-close" onclick="closeWinPopup()">CONTINUE →</button>
+        </div>
+    </div>
+
     <script>
         const API = window.location.origin;
         let currentUser = null;
         let currentBet = 100;
         let isSpinning = false;
         let isPromoter = false;
+        
+        function showWinPopup(amount) {
+            document.getElementById('win-amount').innerText = amount.toLocaleString();
+            document.getElementById('win-popup').style.display = 'flex';
+            setTimeout(closeWinPopup, 3000);
+        }
+        
+        function closeWinPopup() {
+            document.getElementById('win-popup').style.display = 'none';
+        }
         
         // 🎯 PROMOTER LOGIC: Better odds - higher chances of big wins
         const getSegments = (isPromoter) => {
@@ -465,6 +539,9 @@
                 document.getElementById('last-win').innerText = prize.toLocaleString();
                 document.getElementById('result').innerHTML = `🎉🎉🎉 CONGRATULATIONS! 🎉🎉🎉<br>You won ${prizeName}! 🎉🎉🎉`;
                 document.getElementById('result').style.color = "#d4af37";
+                
+                // 🎉 Show win popup for every win
+                if (prize > 0) showWinPopup(prize);
                 
                 if (prize >= 10000) {
                     const modal = document.getElementById('result-modal');
