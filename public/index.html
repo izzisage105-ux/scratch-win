@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scratch & Win - Game Lobby</title>
+    <style>
+        /* Same styles as before - keeping them for brevity */
+        :root {
+            --gold: #d4af37;
+            --deep-purple: #1a0033;
+            --light-purple: #330066;
+            --green: #008751;
+            --red: #dc3545;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--deep-purple) 0%, #0a0a2a 100%);
+            color: white;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .header {
+            background: rgba(0,0,0,0.95);
+            padding: 20px;
+            border-bottom: 2px solid var(--gold);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            color: var(--gold);
+            font-size: 1.8rem;
+        }
+        
+        .balance-card {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: 1px solid var(--gold);
+            display: flex;
+            gap: 30px;
+        }
+        
+        .balance-item {
+            text-align: center;
+        }
+        
+        .balance-label {
+            font-size: 11px;
+            color: #aaa;
+        }
+        
+        .balance-amount {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--gold);
+        }
+        
+        .btn-header {
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .btn-deposit {
+            background: var(--green);
+            border-color: var(--green);
+        }
+        
+        .btn-logout {
+            background: var(--red);
+            border-color: var(--red);
+        }
+        
+        .welcome {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .welcome h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .game-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+        }
+        
+        .game-card {
+            background: rgba(0,0,0,0.6);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(212,175,55,0.3);
+            transition: transform 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--gold);
+        }
+        
+        .game-icon {
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 70px;
+            background: linear-gradient(135deg, var(--light-purple), #1a0033);
+        }
+        
+        .game-info {
+            padding: 20px;
+        }
+        
+        .game-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--gold);
+        }
+        
+        .game-description {
+            font-size: 0.85rem;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+        
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .game-stats span {
+            color: var(--gold);
+        }
+        
+        .play-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--green);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .hot-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--red);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .new-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: var(--green);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        .featured {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .featured-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--gold);
+            border-left: 4px solid var(--gold);
+            padding-left: 15px;
+        }
+        
+        .featured-card {
+            background: linear-gradient(135deg, rgba(212,175,55,0.2), rgba(0,0,0,0.6));
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .featured-btn {
+            background: var(--gold);
+            color: black;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .live-feed {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.95);
+            border-top: 1px solid var(--gold);
+            padding: 8px 20px;
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            z-index: 90;
+        }
+        
+        .feed-item {
+            display: inline-block;
+            padding: 5px 15px;
+            background: rgba(212,175,55,0.2);
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .feed-item.win {
+            background: rgba(0,135,81,0.3);
+            color: #00ff00;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: var(--deep-purple);
+            border: 2px solid var(--gold);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        @media (max-width: 768px) {
+            .top-bar { flex-direction: column; text-align: center; }
+            .game-grid { grid-template-columns: 1fr; }
+            .featured-card { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="top-bar">
+            <h1 class="logo">🎮 SCRATCH & WIN</h1>
+            <div class="balance-card">
+                <div class="balance-item">
+                    <div class="balance-label">💰 REAL BALANCE</div>
+                    <div class="balance-amount">₦<span id="real-balance">0</span></div>
+                </div>
+                <div class="balance-item">
+                    <div class="balance-label">🎮 DEMO BALANCE</div>
+                    <div class="balance-amount">₦<span id="demo-balance">0</span></div>
+                </div>
+            </div>
+            <div class="header-buttons">
+                <button class="btn-header btn-deposit" id="deposit-btn">+ DEPOSIT</button>
+                <button class="btn-header" id="history-btn">📜 HISTORY</button>
+                <button class="btn-header btn-logout" id="logout-btn">🚪 LOGOUT</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="welcome">
+        <h2>Welcome, <span id="username">Player</span>! 🎉</h2>
+        <p>Choose your game and start winning. All games share your real wallet balance!</p>
+    </div>
+    
+    <div class="featured">
+        <div class="featured-title">🔥 GAME OF THE DAY</div>
+        <div class="featured-card">
+            <div>
+                <h3>💥 CRASH GAME</h3>
+                <p>Cash out before the multiplier crashes! Up to 1000x multiplier.</p>
+            </div>
+            <button class="featured-btn" onclick="playGame('crash')">PLAY NOW →</button>
+        </div>
+    </div>
+    
+    <div class="game-grid" id="game-grid"></div>
+    
+    <div class="live-feed">
+        <span>🔥 Live Wins:</span>
+        <div id="feed-items"></div>
+    </div>
+    
+    <div id="deposit-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="color: var(--gold);">💰 Deposit</h2>
+            <p>Select amount to deposit</p>
+            <div style="margin: 20px 0;">
+                <button class="btn-header" onclick="deposit(1000)" style="margin: 5px;">₦1,000</button>
+                <button class="btn-header" onclick="deposit(5000)" style="margin: 5px;">₦5,000</button>
+                <button class="btn-header" onclick="deposit(10000)" style="margin: 5px;">₦10,000</button>
+                <button class="btn-header" onclick="deposit(50000)" style="margin: 5px;">₦50,000</button>
+            </div>
+            <button class="play-btn" onclick="closeDepositModal()" style="background: #333;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        let currentUser = null;
+        
+        const games = [
+            { id: 'scratch', name: 'Scratch & Win', icon: '🎮', desc: 'Match 3 to win! Classic scratch card.', minBet: 150, maxWin: '₦50,000', hot: false, new: true, url: 'game.html' },
+            { id: 'crash', name: 'Crash Game', icon: '💥', desc: 'Cash out before the crash! Up to 1000x.', minBet: 100, maxWin: '₦500,000', hot: true, new: false, url: 'crash.html' },
+            { id: 'sudoku', name: 'Sudoku', icon: '📊', desc: 'Solve puzzles, earn prizes. Faster = bigger rewards!', minBet: 100, maxWin: '₦25,000', hot: false, new: false, url: 'sudoku.html' },
+            { id: 'minesweeper', name: 'Minesweeper', icon: '💣', desc: 'Avoid mines, clear the board.', minBet: 100, maxWin: '₦35,000', hot: false, new: true, url: 'minesweeper.html' },
+            { id: 'wheel', name: 'Wheel of Fortune', icon: '🎡', desc: 'Spin the wheel, win up to 500,000!', minBet: 100, maxWin: '₦500,000', hot: true, new: false, url: 'wheel.html' },
+            { id: 'blackjack', name: 'Blackjack', icon: '🃏', desc: 'Beat the dealer to 21.', minBet: 100, maxWin: '₦100,000', hot: false, new: false, url: 'blackjack.html' }
+        ];
+        
+        async function loadUser() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'auth.html';
+                return;
+            }
+            try {
+                const res = await fetch(API + '/user/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    document.getElementById('username').innerText = currentUser.username;
+                    document.getElementById('real-balance').innerText = (currentUser.balance || 0).toLocaleString();
+                    document.getElementById('demo-balance').innerText = (currentUser.demoBalance || 0).toLocaleString();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Session expired');
+                logout();
+            }
+        }
+        
+        function renderGames() {
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = '';
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.onclick = () => playGame(game.id);
+                card.innerHTML = `
+                    ${game.hot ? '<div class="hot-badge">🔥 HOT</div>' : ''}
+                    ${game.new ? '<div class="new-badge">✨ NEW</div>' : ''}
+                    <div class="game-icon">${game.icon}</div>
+                    <div class="game-info">
+                        <div class="game-title">${game.name}</div>
+                        <div class="game-description">${game.desc}</div>
+                        <div class="game-stats">
+                            <span>Min: ₦${game.minBet}</span>
+                            <span>Max: ${game.maxWin}</span>
+                        </div>
+                        <button class="play-btn">PLAY NOW →</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        function playGame(gameId) {
+            const game = games.find(g => g.id === gameId);
+            if (game) {
+                window.location.href = game.url;
+            }
+        }
+        
+        async function deposit(amount) {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(API + '/deposit/request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ amount, paymentProof: 'Bank Transfer' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`✅ Deposit request submitted for ₦${amount.toLocaleString()}!`);
+                    closeDepositModal();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('Network error');
+            }
+        }
+        
+        function closeDepositModal() {
+            document.getElementById('deposit-modal').style.display = 'none';
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('adminToken');
+            window.location.href = 'auth.html';
+        }
+        
+        function startLiveFeed() {
+            const wins = [
+                { name: 'Efe', game: 'Crash', amount: 25000 },
+                { name: 'Tobi', game: 'Blackjack', amount: 5000 },
+                { name: 'Sade', game: 'Wheel', amount: 100000 },
+                { name: 'Uche', game: 'Minesweeper', amount: 15000 },
+                { name: 'Bisi', game: 'Sudoku', amount: 3000 }
+            ];
+            const feed = document.getElementById('feed-items');
+            function addWin() {
+                const win = wins[Math.floor(Math.random() * wins.length)];
+                const item = document.createElement('div');
+                item.className = 'feed-item win';
+                item.innerHTML = `🔥 ${win.name} won ₦${win.amount.toLocaleString()} on ${win.game}!`;
+                feed.appendChild(item);
+                while (feed.children.length > 10) feed.removeChild(feed.firstChild);
+                feed.scrollLeft = feed.scrollWidth;
+            }
+            setInterval(addWin, 8000);
+            wins.slice(0, 3).forEach(addWin);
+        }
+        
+        document.getElementById('deposit-btn').onclick = () => document.getElementById('deposit-modal').style.display = 'flex';
+        document.getElementById('history-btn').onclick = () => window.location.href = 'game-history.html';
+        document.getElementById('logout-btn').onclick = logout;
+        window.onclick = (e) => { if (e.target === document.getElementById('deposit-modal')) closeDepositModal(); };
+        
+        async function init() {
+            await loadUser();
+            renderGames();
+            startLiveFeed();
+        }
+        init();
+    </script>
+</body>
+</html>

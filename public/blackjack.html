@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Blackjack - Scratch & Win</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --deep-purple: #1a0033;
+            --light-purple: #330066;
+            --green: #008751;
+            --red: #dc3545;
+        }
+        
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        body {
+            background: var(--deep-purple);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .nav-bar {
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav-link {
+            color: var(--gold);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: rgba(212,175,55,0.3);
+        }
+        
+        .game-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.5);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid var(--gold);
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--gold);
+            margin: 0 0 20px 0;
+        }
+        
+        .promoter-badge {
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            color: #1a0033;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--gold);
+        }
+        
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .hand {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .hand-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--gold);
+        }
+        
+        .cards {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .card {
+            background: white;
+            color: black;
+            width: 80px;
+            height: 100px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        
+        .card.heart, .card.diamond { color: var(--red); }
+        .card.spade, .card.club { color: black; }
+        
+        .card-value {
+            font-size: 32px;
+        }
+        
+        .card-suit {
+            font-size: 28px;
+        }
+        
+        .card-back {
+            background: repeating-linear-gradient(45deg, #2c3e50, #2c3e50 10px, #34495e 10px, #34495e 20px);
+            color: white;
+        }
+        
+        .hand-total {
+            margin-top: 15px;
+            font-size: 18px;
+        }
+        
+        .bet-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .bet-btn {
+            background: var(--light-purple);
+            border: 1px solid var(--gold);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .bet-btn.active {
+            background: var(--gold);
+            color: black;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .action-hit {
+            background: var(--green);
+            color: white;
+        }
+        
+        .action-stand {
+            background: var(--gold);
+            color: black;
+        }
+        
+        .action-double {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .action-new {
+            background: var(--light-purple);
+            color: white;
+            border: 1px solid var(--gold);
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: var(--deep-purple);
+            border: 2px solid var(--gold);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .prize-amount {
+            font-size: 48px;
+            color: var(--gold);
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .card { width: 60px; height: 80px; font-size: 18px; }
+            .card-value { font-size: 24px; }
+            .card-suit { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="index.html" class="nav-link">🏠 Lobby</a>
+        <a href="game.html" class="nav-link">🎮 Scratch</a>
+        <a href="crash.html" class="nav-link">💥 Crash</a>
+        <a href="sudoku.html" class="nav-link">📊 Sudoku</a>
+        <a href="minesweeper.html" class="nav-link">💣 Minesweeper</a>
+        <a href="wheel.html" class="nav-link">🎡 Wheel</a>
+        <a href="blackjack.html" class="nav-link active">🃏 Blackjack</a>
+    </div>
+
+    <div class="game-container">
+        <h1>🃏 BLACKJACK <span id="promoter-badge" style="display:none;" class="promoter-badge">👑 PROMOTER (3:2 Blackjack Payout)</span></h1>
+        
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-label">Balance</div>
+                <div class="stat-value">₦<span id="balance">0</span></div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Bet Amount</div>
+                <div class="stat-value">₦<span id="bet-amount">100</span></div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Last Win</div>
+                <div class="stat-value">₦<span id="last-win">0</span></div>
+            </div>
+        </div>
+        
+        <div class="bet-controls">
+            <button class="bet-btn" data-bet="100">₦100</button>
+            <button class="bet-btn" data-bet="500">₦500</button>
+            <button class="bet-btn" data-bet="1000">₦1,000</button>
+            <button class="bet-btn" data-bet="5000">₦5,000</button>
+            <button class="bet-btn" data-bet="10000">₦10,000</button>
+        </div>
+        
+        <div class="game-area">
+            <div class="hand">
+                <div class="hand-title">DEALER</div>
+                <div class="cards" id="dealer-cards"></div>
+                <div class="hand-total" id="dealer-total"></div>
+            </div>
+            
+            <div class="hand">
+                <div class="hand-title">PLAYER</div>
+                <div class="cards" id="player-cards"></div>
+                <div class="hand-total" id="player-total"></div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-btn action-hit" id="hit-btn" disabled>HIT</button>
+            <button class="action-btn action-stand" id="stand-btn" disabled>STAND</button>
+            <button class="action-btn action-double" id="double-btn" disabled>DOUBLE</button>
+            <button class="action-btn action-new" id="new-game-btn">NEW GAME</button>
+        </div>
+        
+        <div class="result-area" id="result">
+            Place a bet and click NEW GAME to start!
+        </div>
+    </div>
+    
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="result-title"></h2>
+            <div id="result-message"></div>
+            <div class="prize-amount" id="prize-amount"></div>
+            <button class="btn btn-primary" id="modal-close">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        let currentUser = null;
+        let currentBet = 100;
+        let gameActive = false;
+        let deck = [];
+        let playerCards = [];
+        let dealerCards = [];
+        let isPromoter = false;
+        
+        const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        
+        function createDeck() {
+            const newDeck = [];
+            for (const suit of suits) {
+                for (const value of values) {
+                    newDeck.push({ suit, value });
+                }
+            }
+            for (let i = newDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+            }
+            return newDeck;
+        }
+        
+        function getCardValue(card) {
+            if (card.value === 'A') return 11;
+            if (['K', 'Q', 'J'].includes(card.value)) return 10;
+            return parseInt(card.value);
+        }
+        
+        function calculateHandTotal(hand) {
+            let total = 0;
+            let aces = 0;
+            for (const card of hand) {
+                if (card.value === 'A') { aces++; total += 11; }
+                else { total += getCardValue(card); }
+            }
+            while (total > 21 && aces > 0) { total -= 10; aces--; }
+            return total;
+        }
+        
+        function renderCard(card, isFaceDown = false) {
+            if (isFaceDown) return '<div class="card card-back">?</div>';
+            const suitSymbol = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
+            return `<div class="card ${card.suit}"><div class="card-value">${card.value}</div><div class="card-suit">${suitSymbol[card.suit]}</div></div>`;
+        }
+        
+        function updateUI() {
+            const playerCardsDiv = document.getElementById('player-cards');
+            playerCardsDiv.innerHTML = playerCards.map(card => renderCard(card)).join('');
+            document.getElementById('player-total').innerHTML = `Total: ${calculateHandTotal(playerCards)}`;
+            
+            const dealerCardsDiv = document.getElementById('dealer-cards');
+            if (gameActive) {
+                dealerCardsDiv.innerHTML = renderCard(dealerCards[0], true) + dealerCards.slice(1).map(card => renderCard(card)).join('');
+                document.getElementById('dealer-total').innerHTML = `Total: ?`;
+            } else {
+                dealerCardsDiv.innerHTML = dealerCards.map(card => renderCard(card)).join('');
+                document.getElementById('dealer-total').innerHTML = `Total: ${calculateHandTotal(dealerCards)}`;
+            }
+        }
+        
+        async function loadUser() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = 'auth.html'; return; }
+            try {
+                const res = await fetch(API + '/user/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    isPromoter = currentUser.isPromoter || false;
+                    document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                    if (isPromoter) {
+                        document.getElementById('promoter-badge').style.display = 'inline-block';
+                    }
+                }
+            } catch (err) { console.error(err); }
+        }
+        
+        async function startGame() {
+            if (currentUser.balance < currentBet) {
+                alert(`Insufficient balance! Need ₦${currentBet.toLocaleString()}`);
+                return false;
+            }
+            
+            const token = localStorage.getItem('token');
+            const res = await fetch(API + '/game/blackjack/bet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ amount: currentBet })
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                currentUser.balance = data.newBalance;
+                document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                
+                deck = createDeck();
+                playerCards = [deck.pop(), deck.pop()];
+                dealerCards = [deck.pop(), deck.pop()];
+                gameActive = true;
+                
+                document.getElementById('hit-btn').disabled = false;
+                document.getElementById('stand-btn').disabled = false;
+                document.getElementById('double-btn').disabled = false;
+                document.getElementById('new-game-btn').disabled = true;
+                document.getElementById('result').innerHTML = 'Game in progress...';
+                
+                updateUI();
+                
+                const playerTotal = calculateHandTotal(playerCards);
+                if (playerTotal === 21) { stand(); }
+                return true;
+            } else {
+                alert(data.message);
+                return false;
+            }
+        }
+        
+        async function hit() {
+            if (!gameActive) return;
+            playerCards.push(deck.pop());
+            updateUI();
+            const playerTotal = calculateHandTotal(playerCards);
+            if (playerTotal > 21) { await endGame(false, 'Bust! You went over 21.'); }
+        }
+        
+        async function stand() {
+            if (!gameActive) return;
+            gameActive = false;
+            while (calculateHandTotal(dealerCards) < 17) { dealerCards.push(deck.pop()); }
+            updateUI();
+            
+            const playerTotal = calculateHandTotal(playerCards);
+            const dealerTotal = calculateHandTotal(dealerCards);
+            let win = false;
+            let message = '';
+            let multiplier = 0;
+            
+            if (playerTotal > 21) { message = 'You busted! Dealer wins.'; win = false; multiplier = 0; }
+            else if (dealerTotal > 21) { message = 'Dealer busted! You win!'; win = true; multiplier = 2; }
+            else if (playerTotal > dealerTotal) { message = 'You win!'; win = true; multiplier = 2; }
+            else if (dealerTotal > playerTotal) { message = 'Dealer wins!'; win = false; multiplier = 0; }
+            else { message = 'Push! It\'s a tie.'; win = false; multiplier = 1; }
+            
+            // 🎯 PROMOTER LOGIC: 3:2 payout for natural blackjack
+            if (isPromoter && playerTotal === 21 && playerCards.length === 2 && multiplier === 2) {
+                multiplier = 2.5;
+                message = 'Natural Blackjack! You win 3:2!';
+            }
+            
+            await endGame(win, message, multiplier);
+        }
+        
+        async function double() {
+            if (!gameActive) return;
+            if (currentUser.balance < currentBet) {
+                alert('Insufficient balance to double!');
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            const res = await fetch(API + '/game/blackjack/double', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ amount: currentBet })
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                currentUser.balance = data.newBalance;
+                document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                currentBet *= 2;
+                document.getElementById('bet-amount').innerText = currentBet.toLocaleString();
+                
+                playerCards.push(deck.pop());
+                updateUI();
+                const playerTotal = calculateHandTotal(playerCards);
+                if (playerTotal > 21) {
+                    await endGame(false, 'Bust! You went over 21.');
+                } else {
+                    await stand();
+                }
+            } else {
+                alert(data.message);
+            }
+        }
+        
+        async function endGame(isWin, message, multiplier = 0) {
+            gameActive = false;
+            document.getElementById('hit-btn').disabled = true;
+            document.getElementById('stand-btn').disabled = true;
+            document.getElementById('double-btn').disabled = true;
+            document.getElementById('new-game-btn').disabled = false;
+            
+            let prize = 0;
+            if (isWin) {
+                prize = currentBet * multiplier;
+                const token = localStorage.getItem('token');
+                await fetch(API + '/game/blackjack/win', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ prize, bet: currentBet })
+                });
+                await loadUser();
+                document.getElementById('last-win').innerText = prize.toLocaleString();
+            } else if (multiplier === 1) {
+                const token = localStorage.getItem('token');
+                await fetch(API + '/game/blackjack/push', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ bet: currentBet })
+                });
+                await loadUser();
+            }
+            
+            document.getElementById('result').innerHTML = `${message} ${isWin ? `You won ₦${prize.toLocaleString()}!` : ''}`;
+            document.getElementById('result').style.color = isWin ? '#d4af37' : '#ff8888';
+            
+            if (isWin && prize >= 10000) {
+                const modal = document.getElementById('result-modal');
+                document.getElementById('result-title').innerHTML = '🎉 BIG WIN! 🎉';
+                document.getElementById('result-message').innerHTML = message;
+                document.getElementById('prize-amount').innerHTML = `₦${prize.toLocaleString()}`;
+                modal.style.display = 'flex';
+            }
+            
+            updateUI();
+        }
+        
+        function initBetButtons() {
+            const btns = document.querySelectorAll('.bet-btn');
+            btns.forEach(btn => {
+                btn.onclick = () => {
+                    btns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentBet = parseInt(btn.dataset.bet);
+                    document.getElementById('bet-amount').innerText = currentBet.toLocaleString();
+                };
+            });
+            document.querySelector('.bet-btn[data-bet="100"]').classList.add('active');
+        }
+        
+        document.getElementById('hit-btn').onclick = hit;
+        document.getElementById('stand-btn').onclick = stand;
+        document.getElementById('double-btn').onclick = double;
+        document.getElementById('new-game-btn').onclick = startGame;
+        document.getElementById('modal-close').onclick = () => {
+            document.getElementById('result-modal').style.display = 'none';
+            startGame();
+        };
+        
+        async function init() {
+            await loadUser();
+            initBetButtons();
+        }
+        
+        init();
+    </script>
+</body>
+</html>

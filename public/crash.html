@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crash Game - Scratch & Win</title>
+    <style>
+        :root { --gold: #d4af37; --deep-purple: #1a0033; --green: #008751; --red: #dc3545; }
+        body { background: var(--deep-purple); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
+        .game-container { max-width: 600px; margin: 0 auto; text-align: center; }
+        .multiplier-box { background: #000; border-radius: 20px; padding: 40px; margin: 20px 0; border: 2px solid var(--gold); }
+        .multiplier { font-size: 72px; font-weight: bold; color: var(--gold); }
+        .multiplier.crashed { color: var(--red); }
+        .bet-controls { display: flex; gap: 10px; justify-content: center; margin: 20px 0; }
+        .bet-input { padding: 12px; font-size: 16px; border-radius: 8px; border: none; width: 150px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-crash { background: var(--green); color: white; }
+        .btn-crash:disabled { background: #666; cursor: not-allowed; }
+        .btn-cashout { background: var(--gold); color: black; }
+        .balance { background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; margin: 20px 0; }
+        .promoter-badge { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #1a0033; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-left: 10px; }
+        .nav-bar { background: rgba(0,0,0,0.9); padding: 15px; margin-bottom: 20px; border-radius: 8px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .nav-link { color: var(--gold); text-decoration: none; padding: 8px 16px; border-radius: 8px; }
+        .nav-link:hover { background: rgba(212,175,55,0.2); }
+        .history { margin-top: 30px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; }
+        .history-item { display: inline-block; padding: 5px 10px; margin: 3px; background: #333; border-radius: 4px; font-size: 12px; }
+        .history-item.crashed { background: var(--red); }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="index.html" class="nav-link">🏠 Lobby</a>
+        <a href="game.html" class="nav-link">🎮 Scratch</a>
+        <a href="crash.html" class="nav-link" style="background:rgba(212,175,55,0.3);">💥 Crash</a>
+        <a href="sudoku.html" class="nav-link">📊 Sudoku</a>
+        <a href="minesweeper.html" class="nav-link">💣 Minesweeper</a>
+        <a href="wheel.html" class="nav-link">🎡 Wheel</a>
+        <a href="blackjack.html" class="nav-link">🃏 Blackjack</a>
+    </div>
+
+    <div class="game-container">
+        <h1>💥 CRASH GAME <span id="promoter-badge" style="display:none;" class="promoter-badge">👑 PROMOTER</span></h1>
+        <p>Cash out before the multiplier crashes!</p>
+
+        <div class="balance">
+            Balance: ₦<span id="balance">0</span>
+        </div>
+
+        <div class="multiplier-box">
+            <div class="multiplier" id="multiplier">1.00x</div>
+            <div id="game-status" style="font-size: 14px; margin-top: 10px;">Place a bet to start</div>
+        </div>
+
+        <div class="bet-controls">
+            <input type="number" id="bet-amount" class="bet-input" placeholder="Amount" min="100" step="100">
+            <button id="place-bet" class="btn btn-crash">🎲 PLACE BET</button>
+            <button id="cashout" class="btn btn-cashout" disabled>💰 CASH OUT</button>
+        </div>
+
+        <div class="history">
+            <h4>Recent Crashes</h4>
+            <div id="history-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        let currentUser = null;
+        let gameActive = false;
+        let currentMultiplier = 1.00;
+        let currentBet = 0;
+        let gameInterval = null;
+        let crashHistory = [];
+        let isPromoter = false;
+
+        async function loadUser() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = 'auth.html'; return; }
+            try {
+                const res = await fetch(API + '/user/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    isPromoter = currentUser.isPromoter || false;
+                    document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                    if (isPromoter) {
+                        document.getElementById('promoter-badge').style.display = 'inline-block';
+                    }
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function startGame(betAmount) {
+            gameActive = true;
+            currentMultiplier = 1.00;
+            currentBet = betAmount;
+            updateMultiplierDisplay();
+
+            // 🎯 PROMOTER LOGIC: Higher crash point (5x to 50x) vs normal (1x to 11x)
+            let crashPoint;
+            if (isPromoter) {
+                crashPoint = Math.random() * 45 + 5;  // 5x to 50x
+            } else {
+                crashPoint = Math.random() < 0.3 ? Math.random() * 3 + 1 : Math.random() * 7 + 4; // 1x to 11x
+            }
+            
+            gameInterval = setInterval(() => {
+                if (!gameActive) return;
+                currentMultiplier += 0.02;
+                updateMultiplierDisplay();
+                if (currentMultiplier >= crashPoint) { crashGame(); }
+            }, 100);
+        }
+
+        async function crashGame() {
+            if (!gameActive) return;
+            gameActive = false;
+            clearInterval(gameInterval);
+            document.getElementById('multiplier').classList.add('crashed');
+            document.getElementById('game-status').innerHTML = '💥 CRASHED! You lost your bet. 💥';
+            document.getElementById('place-bet').disabled = false;
+            document.getElementById('cashout').disabled = true;
+            
+            const token = localStorage.getItem('token');
+            await fetch(API + '/game/crash/result', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ bet: currentBet, multiplier: 0, crashed: true })
+            });
+            await loadUser();
+            crashHistory.unshift({ multiplier: currentMultiplier.toFixed(2), crashed: true });
+            updateHistory();
+        }
+
+        async function cashOut() {
+            if (!gameActive) return;
+            gameActive = false;
+            clearInterval(gameInterval);
+            const winAmount = currentBet * currentMultiplier;
+            document.getElementById('game-status').innerHTML = `🎉 CASHED OUT at ${currentMultiplier.toFixed(2)}x! You won ₦${winAmount.toFixed(2)}! 🎉`;
+            document.getElementById('place-bet').disabled = false;
+            document.getElementById('cashout').disabled = true;
+            document.getElementById('multiplier').classList.remove('crashed');
+            
+            const token = localStorage.getItem('token');
+            await fetch(API + '/game/crash/result', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ bet: currentBet, multiplier: currentMultiplier, crashed: false })
+            });
+            await loadUser();
+            crashHistory.unshift({ multiplier: currentMultiplier.toFixed(2), crashed: false, win: winAmount });
+            updateHistory();
+        }
+
+        function updateMultiplierDisplay() { document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x'; }
+        function updateHistory() {
+            const historyDiv = document.getElementById('history-list');
+            historyDiv.innerHTML = crashHistory.slice(0, 15).map(h => `<span class="history-item ${h.crashed ? 'crashed' : ''}">${h.crashed ? '💥' : '✅'} ${h.multiplier}x</span>`).join('');
+        }
+
+        document.getElementById('place-bet').onclick = async () => {
+            const amount = parseFloat(document.getElementById('bet-amount').value);
+            if (!amount || amount < 100) { alert('Minimum bet is ₦100'); return; }
+            if (amount > currentUser.balance) { alert('Insufficient balance'); return; }
+            const token = localStorage.getItem('token');
+            const res = await fetch(API + '/game/crash/bet', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ amount })
+            });
+            const data = await res.json();
+            if (data.success) {
+                currentUser.balance = data.newBalance;
+                document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                document.getElementById('place-bet').disabled = true;
+                document.getElementById('cashout').disabled = false;
+                document.getElementById('game-status').innerHTML = 'Game in progress... Cash out before crash!';
+                document.getElementById('multiplier').classList.remove('crashed');
+                startGame(amount);
+            } else { alert(data.message); }
+        };
+        document.getElementById('cashout').onclick = cashOut;
+        loadUser();
+    </script>
+</body>
+</html>

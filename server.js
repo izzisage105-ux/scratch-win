@@ -1520,6 +1520,450 @@ app.get("/api/admin/pending-count", adminMiddleware, async (req, res) => {
   }
 });
 
+// ========== MINESWEEPER ENDPOINTS ==========
+app.post("/game/minesweeper/start", authMiddleware, async (req, res) => {
+    try {
+        const { difficulty, entryFee } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < entryFee) {
+            return res.status(400).json({ success: false, message: "Insufficient balance" });
+        }
+        
+        const newBalance = user.realBalance - entryFee;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/minesweeper/win", authMiddleware, async (req, res) => {
+    try {
+        const { prize, difficulty } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        const newBalance = user.realBalance + prize;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        // Record game history
+        const gameRecord = {
+            id: Date.now().toString(),
+            userId: req.user.id,
+            gameType: 'minesweeper',
+            difficulty: difficulty,
+            prize: prize,
+            result: 'win',
+            createdAt: new Date().toISOString()
+        };
+        await supabase.from('game_history').insert(gameRecord);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ========== WHEEL OF FORTUNE ENDPOINTS ==========
+app.post("/game/wheel/bet", authMiddleware, async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < amount) {
+            return res.status(400).json({ success: false, message: "Insufficient balance" });
+        }
+        
+        const newBalance = user.realBalance - amount;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/wheel/win", authMiddleware, async (req, res) => {
+    try {
+        const { prize, bet } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        const newBalance = user.realBalance + prize;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        // Record game history
+        const gameRecord = {
+            id: Date.now().toString(),
+            userId: req.user.id,
+            gameType: 'wheel',
+            bet: bet,
+            prize: prize,
+            result: prize > 0 ? 'win' : 'loss',
+            createdAt: new Date().toISOString()
+        };
+        await supabase.from('game_history').insert(gameRecord);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ========== BLACKJACK ENDPOINTS ==========
+app.post("/game/blackjack/bet", authMiddleware, async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < amount) {
+            return res.status(400).json({ success: false, message: "Insufficient balance" });
+        }
+        
+        const newBalance = user.realBalance - amount;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/blackjack/double", authMiddleware, async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < amount) {
+            return res.status(400).json({ success: false, message: "Insufficient balance" });
+        }
+        
+        const newBalance = user.realBalance - amount;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/blackjack/win", authMiddleware, async (req, res) => {
+    try {
+        const { prize, bet } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        const newBalance = user.realBalance + prize;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        // Record game history
+        const gameRecord = {
+            id: Date.now().toString(),
+            userId: req.user.id,
+            gameType: 'blackjack',
+            bet: bet,
+            prize: prize,
+            result: 'win',
+            createdAt: new Date().toISOString()
+        };
+        await supabase.from('game_history').insert(gameRecord);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/blackjack/push", authMiddleware, async (req, res) => {
+    try {
+        const { bet } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        const newBalance = user.realBalance + bet;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ========== SUDOKU GAME ROUTES ==========
+app.post("/game/sudoku/start", authMiddleware, async (req, res) => {
+    try {
+        const { difficulty, entryFee } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < entryFee) {
+            return res.status(400).json({ success: false, message: "Insufficient balance" });
+        }
+        
+        const newBalance = user.realBalance - entryFee;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/sudoku/win", authMiddleware, async (req, res) => {
+    try {
+        const { prize, difficulty, time } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        const newBalance = user.realBalance + prize;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        // Record game history
+        const gameRecord = {
+            id: Date.now().toString(),
+            userId: req.user.id,
+            gameType: 'sudoku',
+            difficulty: difficulty,
+            time: time,
+            prize: prize,
+            result: 'win',
+            createdAt: new Date().toISOString()
+        };
+        await supabase.from('game_history').insert(gameRecord);
+        
+        // Send notification for big wins
+        if (prize >= 5000) {
+            await addNotification(req.user.id, 'sudoku_win', prize);
+        }
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/sudoku/hint", authMiddleware, async (req, res) => {
+    try {
+        const { cost } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < cost) {
+            return res.status(400).json({ success: false, message: "Insufficient balance for hint" });
+        }
+        
+        const newBalance = user.realBalance - cost;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/sudoku/generate", authMiddleware, async (req, res) => {
+    try {
+        const { difficulty } = req.body;
+        
+        // In production, fetch from a Sudoku API or database
+        // For now, return a simple structure
+        const puzzles = {
+            easy: generateEasyPuzzle(),
+            medium: generateMediumPuzzle(),
+            hard: generateHardPuzzle(),
+            expert: generateExpertPuzzle()
+        };
+        
+        res.json({ 
+            success: true, 
+            puzzle: puzzles[difficulty].puzzle,
+            solution: puzzles[difficulty].solution
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Helper functions for puzzle generation (simplified)
+function generateEasyPuzzle() {
+    // Return a pre-defined easy puzzle
+    return {
+        puzzle: [
+            [5,3,0,0,7,0,0,0,0],
+            [6,0,0,1,9,5,0,0,0],
+            [0,9,8,0,0,0,0,6,0],
+            [8,0,0,0,6,0,0,0,3],
+            [4,0,0,8,0,3,0,0,1],
+            [7,0,0,0,2,0,0,0,6],
+            [0,6,0,0,0,0,2,8,0],
+            [0,0,0,4,1,9,0,0,5],
+            [0,0,0,0,8,0,0,7,9]
+        ],
+        solution: [
+            [5,3,4,6,7,8,9,1,2],
+            [6,7,2,1,9,5,3,4,8],
+            [1,9,8,3,4,2,5,6,7],
+            [8,5,9,7,6,1,4,2,3],
+            [4,2,6,8,5,3,7,9,1],
+            [7,1,3,9,2,4,8,5,6],
+            [9,6,1,5,3,7,2,8,4],
+            [2,8,7,4,1,9,6,3,5],
+            [3,4,5,2,8,6,1,7,9]
+        ]
+    };
+}
+
+function generateMediumPuzzle() {
+    // Simplified medium puzzle
+    return {
+        puzzle: [
+            [0,0,0,2,0,0,0,0,0],
+            [0,0,0,0,0,5,0,0,0],
+            [0,8,0,0,0,0,0,4,0],
+            [0,0,0,0,0,0,1,0,0],
+            [0,0,7,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,9,0],
+            [0,3,0,0,0,0,0,0,6],
+            [0,0,0,4,0,0,0,0,0],
+            [0,0,0,0,0,8,0,0,0]
+        ],
+        solution: [] // Would need full solution
+    };
+}
+
+function generateHardPuzzle() {
+    return generateMediumPuzzle(); // Placeholder
+}
+
+function generateExpertPuzzle() {
+    return generateMediumPuzzle(); // Placeholder
+}
+
+// ========== CRASH GAME ROUTES ==========
+app.post("/game/crash/bet", authMiddleware, async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < amount) {
+            return res.status(400).json({ success: false, message: "Insufficient balance" });
+        }
+        
+        const newBalance = user.realBalance - amount;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/crash/result", authMiddleware, async (req, res) => {
+    try {
+        const { bet, multiplier, crashed } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        let newBalance = user.realBalance;
+        let winAmount = 0;
+        
+        if (!crashed) {
+            winAmount = bet * multiplier;
+            newBalance = user.realBalance + winAmount;
+            await supabase
+                .from('users')
+                .update({ realBalance: newBalance })
+                .eq('id', req.user.id);
+        }
+        
+        res.json({ success: true, newBalance, winAmount });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ========== START SERVER ==========
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
