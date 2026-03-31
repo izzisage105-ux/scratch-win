@@ -1859,6 +1859,64 @@ app.post("/game/slots/win", authMiddleware, async (req, res) => {
     }
 });
 
+// ========== BALLOON POP ENDPOINTS ==========
+app.post("/game/balloon/bet", authMiddleware, async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (user.realBalance < amount) {
+            return res.status(400).json({ success: false, message: "Insufficient balance" });
+        }
+        
+        const newBalance = user.realBalance - amount;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/game/balloon/win", authMiddleware, async (req, res) => {
+    try {
+        const { prize, bet } = req.body;
+        const { data: user } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+        
+        const newBalance = user.realBalance + prize;
+        await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+        
+        const gameRecord = {
+            id: Date.now().toString(),
+            userId: req.user.id,
+            gameType: 'balloon',
+            bet: bet,
+            prize: prize,
+            result: prize > 0 ? 'win' : 'loss',
+            createdAt: new Date().toISOString()
+        };
+        await supabase.from('game_history').insert(gameRecord);
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ========== CRASH GAME ROUTES ==========
 app.post("/game/crash/bet", authMiddleware, async (req, res) => {
     try {

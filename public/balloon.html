@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Balloon Pop - Scratch & Win</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --deep-purple: #1a0033;
+            --light-purple: #330066;
+            --green: #008751;
+            --red: #dc3545;
+            --pink: #ff69b4;
+            --orange: #ff9800;
+            --blue: #2196f3;
+        }
+        
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a2a 0%, #1a0033 100%);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            font-size: 14px;
+        }
+        
+        .nav-bar {
+            background: rgba(0,0,0,0.9);
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 50px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav-link {
+            color: var(--gold);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: rgba(212,175,55,0.3);
+        }
+        
+        .game-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--gold);
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+        }
+        
+        .promoter-badge {
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            color: #1a0033;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 8px;
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.5);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #aaa;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--gold);
+        }
+        
+        .game-area {
+            background: linear-gradient(135deg, #87CEEB, #00BFFF);
+            border-radius: 20px;
+            padding: 20px;
+            min-height: 400px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        
+        .balloon {
+            position: absolute;
+            width: 60px;
+            height: 70px;
+            background: var(--pink);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 15px;
+            background: #8B4513;
+        }
+        
+        .balloon.bomb {
+            background: #333;
+            background: radial-gradient(circle at 30% 30%, #444, #222);
+        }
+        
+        .balloon.bomb::before {
+            content: '💣';
+            font-size: 24px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .balloon:hover {
+            transform: scale(1.05);
+        }
+        
+        .timer-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        
+        .timer-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--gold));
+            transition: width 0.1s linear;
+        }
+        
+        .score-display {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--gold);
+            margin: 15px 0;
+        }
+        
+        .bet-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .bet-btn {
+            background: var(--light-purple);
+            border: 1px solid var(--gold);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .bet-btn.active {
+            background: var(--gold);
+            color: black;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--green), #006644);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        
+        /* WIN POPUP */
+        .win-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .win-popup-content {
+            background: linear-gradient(135deg, #1a0033, #330066);
+            border: 3px solid #d4af37;
+            border-radius: 30px;
+            padding: 30px;
+            text-align: center;
+            max-width: 350px;
+            margin: auto;
+            animation: popIn 0.5s ease;
+        }
+        
+        .win-popup-content h2 {
+            color: #d4af37;
+            font-size: 32px;
+            margin: 0;
+        }
+        
+        .win-amount {
+            font-size: 42px;
+            color: gold;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        
+        .win-close {
+            background: #d4af37;
+            color: black;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @media (max-width: 500px) {
+            .balloon { width: 45px; height: 55px; font-size: 10px; }
+            .balloon.bomb::before { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="index.html" class="nav-link">🏠 Lobby</a>
+        <a href="game.html" class="nav-link">🎮 Scratch</a>
+        <a href="crash.html" class="nav-link">💥 Crash</a>
+        <a href="dice.html" class="nav-link">🎲 Dice</a>
+        <a href="slots.html" class="nav-link">🎰 Slots</a>
+        <a href="balloon.html" class="nav-link active">🎈 Balloon</a>
+        <a href="minesweeper.html" class="nav-link">💣 Minesweeper</a>
+        <a href="wheel.html" class="nav-link">🎡 Wheel</a>
+        <a href="blackjack.html" class="nav-link">🃏 Blackjack</a>
+    </div>
+
+    <div class="game-container">
+        <h1>🎈 BALLOON POP <span id="promoter-badge" style="display:none;" class="promoter-badge">👑 PROMOTER (Better Odds + Higher Multipliers)</span></h1>
+        
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-label">Balance</div>
+                <div class="stat-value">₦<span id="balance">0</span></div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Bet Amount</div>
+                <div class="stat-value">₦<span id="bet-amount">100</span></div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Current Win</div>
+                <div class="stat-value">₦<span id="current-win">0</span></div>
+            </div>
+        </div>
+        
+        <div class="bet-controls">
+            <button class="bet-btn" data-bet="100">₦100</button>
+            <button class="bet-btn" data-bet="500">₦500</button>
+            <button class="bet-btn" data-bet="1000">₦1,000</button>
+            <button class="bet-btn" data-bet="5000">₦5,000</button>
+            <button class="bet-btn" data-bet="10000">₦10,000</button>
+        </div>
+        
+        <div class="score-display">
+            💰 ₦<span id="running-total">0</span>
+        </div>
+        
+        <div class="timer-bar">
+            <div class="timer-fill" id="timer-fill"></div>
+        </div>
+        
+        <div class="game-area" id="game-area">
+            <!-- Balloons will appear here -->
+        </div>
+        
+        <div class="result" id="result">
+            Click START to begin! Pop balloons before time runs out. Avoid bombs!
+        </div>
+        
+        <button class="btn" id="start-btn">🎈 START GAME (12s) 🎈</button>
+    </div>
+
+    <!-- WIN POPUP -->
+    <div id="win-popup" class="win-popup">
+        <div class="win-popup-content">
+            <div style="font-size: 60px; margin-bottom: 15px;">🎉</div>
+            <h2>YOU WON!</h2>
+            <div class="win-amount">₦<span id="win-amount">0</span></div>
+            <button class="win-close" onclick="closeWinPopup()">CONTINUE →</button>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        let currentUser = null;
+        let currentBet = 100;
+        let isPromoter = false;
+        let gameActive = false;
+        let gameInterval = null;
+        let timerInterval = null;
+        let currentWin = 0;
+        let timeLeft = 12;
+        let balloonCount = 0;
+        
+        // 🎯 PROMOTER ADVANTAGE: Better odds and higher multipliers
+        const multipliers = {
+            normal: [1.12, 1.15, 1.2, 1.3, 1.5, 2.5,],
+            promoter: [1.5, 2, 2.5, 3, 4, 5, 7, 10]
+        };
+        
+        // Bomb chance: Normal 40%, Promoter 5%
+        const bombChance = () => isPromoter ? 0.05 : 0.40;
+        
+        function showWinPopup(amount) {
+            document.getElementById('win-amount').innerText = amount.toLocaleString();
+            document.getElementById('win-popup').style.display = 'flex';
+            setTimeout(closeWinPopup, 3000);
+        }
+        
+        function closeWinPopup() {
+            document.getElementById('win-popup').style.display = 'none';
+        }
+        
+        async function loadUser() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = 'auth.html'; return; }
+            try {
+                const res = await fetch(API + '/user/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    isPromoter = currentUser.isPromoter || false;
+                    document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                    if (isPromoter) {
+                        document.getElementById('promoter-badge').style.display = 'inline-block';
+                    }
+                }
+            } catch (err) { console.error(err); }
+        }
+        
+        function createBalloon() {
+            const gameArea = document.getElementById('game-area');
+            const areaRect = gameArea.getBoundingClientRect();
+            
+            const balloon = document.createElement('div');
+            balloon.className = 'balloon';
+            
+            // Determine if bomb or normal balloon
+            const isBomb = Math.random() < bombChance();
+            let multiplier = 0;
+            let balloonValue = 0;
+            
+            if (isBomb) {
+                balloon.classList.add('bomb');
+                balloon.textContent = '💣';
+                balloonValue = 0;
+            } else {
+                // Select random multiplier from available pool
+                const multArray = isPromoter ? multipliers.promoter : multipliers.normal;
+                multiplier = multArray[Math.floor(Math.random() * multArray.length)];
+                balloonValue = currentBet * multiplier;
+                balloon.textContent = `${multiplier}x`;
+                balloon.style.background = `linear-gradient(135deg, ${getRandomColor()}, ${getRandomColor()})`;
+            }
+            
+            // Random position within game area (avoid edges)
+            const maxX = areaRect.width - 70;
+            const maxY = areaRect.height - 80;
+            const x = Math.random() * maxX;
+            const y = Math.random() * maxY;
+            
+            balloon.style.left = x + 'px';
+            balloon.style.top = y + 'px';
+            
+            // Store data in balloon element
+            balloon.dataset.value = balloonValue;
+            balloon.dataset.multiplier = multiplier;
+            balloon.dataset.isBomb = isBomb;
+            balloon.dataset.id = balloonCount++;
+            
+            balloon.onclick = () => popBalloon(balloon);
+            gameArea.appendChild(balloon);
+            
+            // Auto-remove balloon after 3 seconds if not popped
+            setTimeout(() => {
+                if (balloon.parentNode) {
+                    balloon.remove();
+                }
+            }, 3000);
+        }
+        
+        function getRandomColor() {
+            const colors = ['#ff69b4', '#ff1493', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        async function popBalloon(balloon) {
+            if (!gameActive) return;
+            
+            const isBomb = balloon.dataset.isBomb === 'true';
+            const multiplier = parseFloat(balloon.dataset.multiplier);
+            const value = parseFloat(balloon.dataset.value);
+            
+            // Remove balloon with pop animation
+            balloon.style.transform = 'scale(0)';
+            balloon.style.opacity = '0';
+            setTimeout(() => balloon.remove(), 150);
+            
+            if (isBomb) {
+                // BOMB! Game over - lose everything
+                gameActive = false;
+                clearInterval(gameInterval);
+                clearInterval(timerInterval);
+                
+                const finalWin = currentWin;
+                document.getElementById('result').innerHTML = `💥 BOMB! You lost ₦${(currentWin + currentBet).toLocaleString()}! Game over. 💥`;
+                document.getElementById('result').style.color = '#ff8888';
+                document.getElementById('start-btn').disabled = false;
+                
+                // No win - bet already deducted
+                await endGame(false, 0);
+                return;
+            }
+            
+            // Add to running total
+            currentWin += value;
+            document.getElementById('running-total').innerText = currentWin.toLocaleString();
+            document.getElementById('current-win').innerText = currentWin.toLocaleString();
+            
+            // Create pop effect
+            const popSound = new Audio();
+            // Visual feedback
+            const area = document.getElementById('game-area');
+            const popEffect = document.createElement('div');
+            popEffect.textContent = `+₦${value.toLocaleString()}`;
+            popEffect.style.position = 'absolute';
+            popEffect.style.left = balloon.style.left;
+            popEffect.style.top = balloon.style.top;
+            popEffect.style.color = '#00ff00';
+            popEffect.style.fontWeight = 'bold';
+            popEffect.style.fontSize = '20px';
+            popEffect.style.textShadow = '1px 1px 0 black';
+            popEffect.style.animation = 'popIn 0.3s ease-out';
+            popEffect.style.pointerEvents = 'none';
+            area.appendChild(popEffect);
+            setTimeout(() => popEffect.remove(), 500);
+            
+            // Spawn new balloon to replace popped one
+            if (gameActive) {
+                createBalloon();
+            }
+        }
+        
+        function spawnBalloons() {
+            if (!gameActive) return;
+            // Spawn 3-5 balloons at a time
+            const count = Math.floor(Math.random() * 3) + 3;
+            for (let i = 0; i < count; i++) {
+                createBalloon();
+            }
+        }
+        
+        async function startGame() {
+            if (gameActive) return;
+            if (currentBet > currentUser.balance) {
+                alert('Insufficient balance');
+                return;
+            }
+            
+            // Deduct bet
+            const token = localStorage.getItem('token');
+            const betRes = await fetch(API + '/game/balloon/bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ amount: currentBet })
+            });
+            const betData = await betRes.json();
+            if (!betData.success) {
+                alert(betData.message);
+                return;
+            }
+            
+            currentUser.balance = betData.newBalance;
+            document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+            
+            // Reset game state
+            gameActive = true;
+            currentWin = 0;
+            timeLeft = 12;
+            balloonCount = 0;
+            document.getElementById('running-total').innerText = '0';
+            document.getElementById('current-win').innerText = '0';
+            document.getElementById('result').innerHTML = '🎈 Pop balloons! Avoid bombs! 🎈';
+            document.getElementById('start-btn').disabled = true;
+            
+            // Clear game area
+            const gameArea = document.getElementById('game-area');
+            gameArea.innerHTML = '';
+            
+            // Start timer
+            const timerFill = document.getElementById('timer-fill');
+            timerFill.style.width = '100%';
+            
+            timerInterval = setInterval(() => {
+                if (!gameActive) return;
+                timeLeft -= 0.1;
+                const percent = (timeLeft / 12) * 100;
+                timerFill.style.width = Math.max(0, percent) + '%';
+                
+                if (timeLeft <= 0) {
+                    // Time's up! End game with current winnings
+                    clearInterval(timerInterval);
+                    clearInterval(gameInterval);
+                    gameActive = false;
+                    endGame(true, currentWin);
+                }
+            }, 100);
+            
+            // Start spawning balloons
+            gameInterval = setInterval(() => {
+                if (gameActive) {
+                    spawnBalloons();
+                }
+            }, 800);
+            
+            // Initial balloons
+            spawnBalloons();
+        }
+        
+        async function endGame(isWin, winAmount) {
+            gameActive = false;
+            document.getElementById('start-btn').disabled = false;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            if (gameInterval) clearInterval(gameInterval);
+            
+            // Clear remaining balloons
+            const gameArea = document.getElementById('game-area');
+            gameArea.innerHTML = '';
+            
+            if (isWin && winAmount > 0) {
+                const token = localStorage.getItem('token');
+                const winRes = await fetch(API + '/game/balloon/win', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ prize: winAmount, bet: currentBet })
+                });
+                const winData = await winRes.json();
+                if (winData.success) {
+                    currentUser.balance = winData.newBalance;
+                    document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                    document.getElementById('result').innerHTML = `🎉 TIME'S UP! You won ₦${winAmount.toLocaleString()}! 🎉`;
+                    document.getElementById('result').style.color = '#d4af37';
+                    if (winAmount > 0) showWinPopup(winAmount);
+                }
+            } else if (winAmount === 0 && !isWin) {
+                document.getElementById('result').innerHTML = `💥 BOMB! You lost your bet. Try again! 💥`;
+                document.getElementById('result').style.color = '#ff8888';
+            }
+        }
+        
+        function initBetButtons() {
+            document.querySelectorAll('.bet-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.bet-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentBet = parseInt(btn.dataset.bet);
+                    document.getElementById('bet-amount').innerText = currentBet.toLocaleString();
+                };
+            });
+            document.querySelector('.bet-btn[data-bet="100"]').classList.add('active');
+        }
+        
+        document.getElementById('start-btn').onclick = startGame;
+        
+        async function init() {
+            await loadUser();
+            initBetButtons();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
