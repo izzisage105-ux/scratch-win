@@ -55,7 +55,7 @@
         }
         
         .game-container {
-            max-width: 700px;
+            max-width: 800px;
             margin: 0 auto;
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(12px);
@@ -110,73 +110,61 @@
         }
         
         .game-area {
-            background: linear-gradient(135deg, #87CEEB, #00BFFF);
+            background: linear-gradient(135deg, #2d5a4a, #1e3a2f);
+            background-image: radial-gradient(circle at 25% 40%, rgba(255,215,0,0.1) 2%, transparent 2.5%);
+            background-size: 30px 30px;
             border-radius: 20px;
             padding: 20px;
-            min-height: 400px;
+            min-height: 500px;
             position: relative;
             overflow: hidden;
-            cursor: pointer;
             margin: 20px 0;
+            border: 2px solid var(--gold);
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
         }
         
         .balloon {
             position: absolute;
-            width: 60px;
-            height: 70px;
-            background: var(--pink);
+            width: 70px;
+            height: 85px;
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #ff4444);
             border-radius: 50%;
             cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
-            color: white;
-            text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.15s ease;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
             animation: float 3s ease-in-out infinite;
         }
         
         .balloon::after {
             content: '';
             position: absolute;
-            bottom: -15px;
+            bottom: -18px;
             left: 50%;
             transform: translateX(-50%);
             width: 2px;
-            height: 15px;
+            height: 18px;
             background: #8B4513;
         }
         
         .balloon.bomb {
-            background: #333;
-            background: radial-gradient(circle at 30% 30%, #444, #222);
-        }
-        
-        .balloon.bomb::before {
-            content: '💣';
-            font-size: 24px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            background: radial-gradient(circle at 30% 30%, #2c2c2c, #1a1a1a);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
         
         @keyframes float {
             0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-12px); }
             100% { transform: translateY(0px); }
         }
         
         .balloon:hover {
-            transform: scale(1.05);
+            transform: scale(1.08);
+            filter: brightness(1.1);
         }
         
         .timer-bar {
             width: 100%;
-            height: 8px;
+            height: 10px;
             background: rgba(255,255,255,0.3);
             border-radius: 10px;
             overflow: hidden;
@@ -193,7 +181,10 @@
         .score-display {
             font-size: 28px;
             font-weight: bold;
-            color: var(--gold);
+            background: linear-gradient(135deg, var(--gold), #ffd700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
             margin: 15px 0;
         }
         
@@ -245,6 +236,16 @@
             background: rgba(0,0,0,0.5);
             border-radius: 12px;
             font-size: 14px;
+        }
+        
+        /* Pop effect */
+        @keyframes popEffect {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        
+        .popping {
+            animation: popEffect 0.2s ease-out forwards;
         }
         
         /* WIN POPUP */
@@ -301,9 +302,25 @@
             100% { transform: scale(1); opacity: 1; }
         }
         
+        .value-popup {
+            position: absolute;
+            color: gold;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 1px 1px 0 black;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 100;
+        }
+        
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+        
         @media (max-width: 500px) {
-            .balloon { width: 45px; height: 55px; font-size: 10px; }
-            .balloon.bomb::before { font-size: 18px; }
+            .balloon { width: 55px; height: 68px; }
+            .balloon::after { bottom: -14px; height: 14px; }
         }
     </style>
 </head>
@@ -347,7 +364,7 @@
         </div>
         
         <div class="score-display">
-            💰 ₦<span id="running-total">0</span>
+            💰 WINNINGS: ₦<span id="running-total">0</span>
         </div>
         
         <div class="timer-bar">
@@ -359,7 +376,7 @@
         </div>
         
         <div class="result" id="result">
-            Click START to begin! Pop balloons before time runs out. Avoid bombs!
+            Click START to begin! Pop balloons to earn multipliers. Avoid bombs!
         </div>
         
         <button class="btn" id="start-btn">🎈 START GAME (12s) 🎈</button>
@@ -387,14 +404,14 @@
         let timeLeft = 12;
         let balloonCount = 0;
         
-        // 🎯 PROMOTER ADVANTAGE: Better odds and higher multipliers
+        // 🎯 Updated multipliers (hidden until popped)
         const multipliers = {
-            normal: [1.12, 1.15, 1.2, 1.3, 1.5, 2.5,],
+            normal: [1.12, 1.15, 1.2, 1.3, 1.5, 2.5],
             promoter: [1.5, 2, 2.5, 3, 4, 5, 7, 10]
         };
         
-        // Bomb chance: Normal 40%, Promoter 5%
-        const bombChance = () => isPromoter ? 0.05 : 0.40;
+        // Bomb chance: Normal 80%, Promoter 2%
+        const bombChance = () => isPromoter ? 0.02 : 0.80;
         
         function showWinPopup(amount) {
             document.getElementById('win-amount').innerText = amount.toLocaleString();
@@ -404,6 +421,24 @@
         
         function closeWinPopup() {
             document.getElementById('win-popup').style.display = 'none';
+        }
+        
+        function showValuePopup(x, y, value, isBomb) {
+            const gameArea = document.getElementById('game-area');
+            const popup = document.createElement('div');
+            popup.className = 'value-popup';
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+            if (isBomb) {
+                popup.textContent = '💣 BOMB!';
+                popup.style.color = '#ff6b6b';
+                popup.style.fontSize = '20px';
+            } else {
+                popup.textContent = `+₦${value.toLocaleString()}`;
+                popup.style.color = '#ffd700';
+            }
+            gameArea.appendChild(popup);
+            setTimeout(() => popup.remove(), 800);
         }
         
         async function loadUser() {
@@ -426,6 +461,8 @@
         }
         
         function createBalloon() {
+            if (!gameActive) return;
+            
             const gameArea = document.getElementById('game-area');
             const areaRect = gameArea.getBoundingClientRect();
             
@@ -439,46 +476,48 @@
             
             if (isBomb) {
                 balloon.classList.add('bomb');
-                balloon.textContent = '💣';
                 balloonValue = 0;
             } else {
-                // Select random multiplier from available pool
+                // Select random multiplier from available pool (hidden until popped)
                 const multArray = isPromoter ? multipliers.promoter : multipliers.normal;
                 multiplier = multArray[Math.floor(Math.random() * multArray.length)];
                 balloonValue = currentBet * multiplier;
-                balloon.textContent = `${multiplier}x`;
-                balloon.style.background = `linear-gradient(135deg, ${getRandomColor()}, ${getRandomColor()})`;
+                // Random balloon color - no text visible
+                const colors = ['#ff6b6b', '#ff8c69', '#ffa07a', '#ff7b7b', '#ff5e5e'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                balloon.style.background = `radial-gradient(circle at 30% 30%, ${randomColor}, ${randomColor}dd)`;
             }
             
             // Random position within game area (avoid edges)
-            const maxX = areaRect.width - 70;
-            const maxY = areaRect.height - 80;
-            const x = Math.random() * maxX;
-            const y = Math.random() * maxY;
+            const maxX = areaRect.width - 80;
+            const maxY = areaRect.height - 95;
+            const x = Math.max(10, Math.random() * maxX);
+            const y = Math.max(10, Math.random() * maxY);
             
             balloon.style.left = x + 'px';
             balloon.style.top = y + 'px';
             
-            // Store data in balloon element
+            // Store data in balloon element (hidden until popped)
             balloon.dataset.value = balloonValue;
             balloon.dataset.multiplier = multiplier;
             balloon.dataset.isBomb = isBomb;
+            balloon.dataset.x = x;
+            balloon.dataset.y = y;
             balloon.dataset.id = balloonCount++;
             
-            balloon.onclick = () => popBalloon(balloon);
+            balloon.onclick = (e) => {
+                e.stopPropagation();
+                popBalloon(balloon);
+            };
+            
             gameArea.appendChild(balloon);
             
-            // Auto-remove balloon after 3 seconds if not popped
+            // Auto-remove balloon after 5 seconds if not popped
             setTimeout(() => {
-                if (balloon.parentNode) {
+                if (balloon.parentNode && gameActive) {
                     balloon.remove();
                 }
-            }, 3000);
-        }
-        
-        function getRandomColor() {
-            const colors = ['#ff69b4', '#ff1493', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9'];
-            return colors[Math.floor(Math.random() * colors.length)];
+            }, 5000);
         }
         
         async function popBalloon(balloon) {
@@ -487,11 +526,18 @@
             const isBomb = balloon.dataset.isBomb === 'true';
             const multiplier = parseFloat(balloon.dataset.multiplier);
             const value = parseFloat(balloon.dataset.value);
+            const x = parseFloat(balloon.dataset.x);
+            const y = parseFloat(balloon.dataset.y);
             
-            // Remove balloon with pop animation
-            balloon.style.transform = 'scale(0)';
-            balloon.style.opacity = '0';
-            setTimeout(() => balloon.remove(), 150);
+            // Show value popup at balloon position
+            showValuePopup(x, y, value, isBomb);
+            
+            // Add pop animation
+            balloon.classList.add('popping');
+            
+            setTimeout(() => {
+                if (balloon.parentNode) balloon.remove();
+            }, 150);
             
             if (isBomb) {
                 // BOMB! Game over - lose everything
@@ -504,7 +550,6 @@
                 document.getElementById('result').style.color = '#ff8888';
                 document.getElementById('start-btn').disabled = false;
                 
-                // No win - bet already deducted
                 await endGame(false, 0);
                 return;
             }
@@ -514,34 +559,18 @@
             document.getElementById('running-total').innerText = currentWin.toLocaleString();
             document.getElementById('current-win').innerText = currentWin.toLocaleString();
             
-            // Create pop effect
-            const popSound = new Audio();
-            // Visual feedback
-            const area = document.getElementById('game-area');
-            const popEffect = document.createElement('div');
-            popEffect.textContent = `+₦${value.toLocaleString()}`;
-            popEffect.style.position = 'absolute';
-            popEffect.style.left = balloon.style.left;
-            popEffect.style.top = balloon.style.top;
-            popEffect.style.color = '#00ff00';
-            popEffect.style.fontWeight = 'bold';
-            popEffect.style.fontSize = '20px';
-            popEffect.style.textShadow = '1px 1px 0 black';
-            popEffect.style.animation = 'popIn 0.3s ease-out';
-            popEffect.style.pointerEvents = 'none';
-            area.appendChild(popEffect);
-            setTimeout(() => popEffect.remove(), 500);
-            
-            // Spawn new balloon to replace popped one
-            if (gameActive) {
-                createBalloon();
-            }
+            // Spawn new balloon after 4-5 seconds to replace popped one
+            setTimeout(() => {
+                if (gameActive) {
+                    createBalloon();
+                }
+            }, 4000 + Math.random() * 1000);
         }
         
         function spawnBalloons() {
             if (!gameActive) return;
-            // Spawn 3-5 balloons at a time
-            const count = Math.floor(Math.random() * 3) + 3;
+            // Spawn 2-4 balloons at a time
+            const count = Math.floor(Math.random() * 3) + 2;
             for (let i = 0; i < count; i++) {
                 createBalloon();
             }
@@ -603,14 +632,15 @@
                 }
             }, 100);
             
-            // Start spawning balloons
+            // Start spawning balloons every 2 seconds
             gameInterval = setInterval(() => {
                 if (gameActive) {
                     spawnBalloons();
                 }
-            }, 800);
+            }, 2000);
             
             // Initial balloons
+            spawnBalloons();
             spawnBalloons();
         }
         
