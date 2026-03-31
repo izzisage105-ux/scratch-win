@@ -133,10 +133,10 @@
             transition: all 0.15s ease;
             box-shadow: 0 6px 12px rgba(0,0,0,0.3);
             animation: float 3s ease-in-out infinite;
-        }
+                }
         
         .balloon::after {
-            content: '';
+             content: '';
             position: absolute;
             bottom: -18px;
             left: 50%;
@@ -147,8 +147,19 @@
         }
         
         .balloon.bomb {
-            background: radial-gradient(circle at 30% 30%, #2c2c2c, #1a1a1a);
+            background: radial-gradient(circle at 30% 30%, #8B0000, #4a0000);
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,0,0,0.3);
+        }
+
+        .balloon.bomb::before {
+            content: '💣';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            opacity: 0.8;
         }
         
         @keyframes float {
