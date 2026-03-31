@@ -12,30 +12,6 @@
             --green: #008751;
             --red: #dc3545;
         }
-
-                /* Add at the top of each file's style section, after :root */
-        * {
-            font-size: 14px;  /* Base font size */
-        }
-
-        body {
-            font-size: 14px;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-        }
-
-        .btn, button {
-            font-size: 0.9rem;
-            padding: 10px 20px;
-        }
-
-        .card, .game-container {
-            max-width: 90%;
-            margin: 10px auto;
-            padding: 15px;
-        }
         
         * {
             box-sizing: border-box;
@@ -172,10 +148,16 @@
         .paylines {
             display: flex;
             justify-content: center;
-            gap: 30px;
+            gap: 20px;
             margin: 20px 0;
             font-size: 12px;
-            color: #aaa;
+            flex-wrap: wrap;
+        }
+        
+        .payline {
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 20px;
         }
         
         .bet-controls {
@@ -328,11 +310,11 @@
             </div>
             
             <div class="paylines">
-                <span>🍒 Cherry x3 = 2x</span>
-                <span>🍊 Orange x3 = 3x</span>
-                <span>🍉 Watermelon x3 = 5x</span>
-                <span>💎 Diamond x3 = 10x</span>
-                <span>👑 Jackpot x3 = 50x</span>
+                <span class="payline">🍒 Cherry x3 = 2x</span>
+                <span class="payline">🍊 Orange x3 = 3x</span>
+                <span class="payline">🍉 Watermelon x3 = 5x</span>
+                <span class="payline">💎 Diamond x3 = 10x</span>
+                <span class="payline">👑 Jackpot x3 = 50x</span>
             </div>
         </div>
         
@@ -361,12 +343,24 @@
         let isPromoter = false;
         
         const symbols = ['🍒', '🍊', '🍉', '💎', '👑'];
+        
+        // 🎯 PROMOTER ADVANTAGE: Better odds and payouts
         const payouts = {
-            '🍒': 2,
-            '🍊': 3,
-            '🍉': 5,
-            '💎': 10,
-            '👑': 50
+            '🍒': { normal: 2, promoter: 2.5 },
+            '🍊': { normal: 3, promoter: 4 },
+            '🍉': { normal: 4, promoter: 6.5 },
+            '💎': { normal: 5, promoter: 12 },
+            '👑': { normal: 10, promoter: 60 }
+        };
+        
+        // Weighted probabilities for symbols (house edge built-in)
+        // Normal: 45% cherry, 25% orange, 15% watermelon, 10% diamond, 5% jackpot
+        // Promoter: 35% cherry, 25% orange, 20% watermelon, 12% diamond, 8% jackpot
+        const getSymbolProbabilities = () => {
+            if (isPromoter) {
+                return [0.35, 0.25, 0.20, 0.12, 0.08]; // Promoter: 8% jackpot chance
+            }
+            return [0.045, 0.025, 0.015, 0.01, 0.005]; // Normal: 5% jackpot chance
         };
         
         function showWinPopup(amount) {
@@ -399,8 +393,7 @@
         }
         
         function getRandomSymbol() {
-            // Weighted probabilities: cherry most common, jackpot rarest
-            const weights = isPromoter ? [0.35, 0.25, 0.20, 0.12, 0.08] : [0.45, 0.25, 0.15, 0.10, 0.05];
+            const weights = getSymbolProbabilities();
             const random = Math.random();
             let cumulative = 0;
             for (let i = 0; i < symbols.length; i++) {
@@ -417,7 +410,6 @@
                 return;
             }
             
-            // Deduct bet
             const token = localStorage.getItem('token');
             const betRes = await fetch(API + '/game/slots/bet', {
                 method: 'POST',
@@ -436,7 +428,6 @@
             isSpinning = true;
             document.getElementById('spin-btn').disabled = true;
             
-            // Animate spinning
             const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
             let spinCount = 0;
             const spinInterval = setInterval(() => {
@@ -446,19 +437,18 @@
                 spinCount++;
                 if (spinCount > 15) {
                     clearInterval(spinInterval);
-                    // Final result
+                    // Final result with weighted probabilities
                     const result = [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
                     reels.forEach((reel, i) => {
                         reel.textContent = result[i];
                     });
                     
-                    // Check win
                     const win = result[0] === result[1] && result[1] === result[2];
                     let prize = 0;
                     let message = '';
                     
                     if (win) {
-                        const multiplier = payouts[result[0]];
+                        const multiplier = isPromoter ? payouts[result[0]].promoter : payouts[result[0]].normal;
                         prize = currentBet * multiplier;
                         message = `🎉 JACKPOT! Three ${result[0]}! You won ₦${prize.toLocaleString()}! 🎉`;
                         processWin(prize, message);

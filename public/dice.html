@@ -12,30 +12,6 @@
             --green: #008751;
             --red: #dc3545;
         }
-
-                /* Add at the top of each file's style section, after :root */
-        * {
-            font-size: 14px;  /* Base font size */
-        }
-
-        body {
-            font-size: 14px;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-        }
-
-        .btn, button {
-            font-size: 0.9rem;
-            padding: 10px 20px;
-        }
-
-        .card, .game-container {
-            max-width: 90%;
-            margin: 10px auto;
-            padding: 15px;
-        }
         
         * {
             box-sizing: border-box;
@@ -178,6 +154,7 @@
             cursor: pointer;
             font-weight: bold;
             font-size: 14px;
+            transition: all 0.2s;
         }
         
         .bet-option.active {
@@ -283,7 +260,7 @@
     </div>
 
     <div class="game-container">
-        <h1>🎲 DICE GAME <span id="promoter-badge" style="display:none;" class="promoter-badge">👑 PROMOTER</span></h1>
+        <h1>🎲 DICE GAME <span id="promoter-badge" style="display:none;" class="promoter-badge">👑 PROMOTER (Better Payouts)</span></h1>
         
         <div class="stats-bar">
             <div class="stat">
@@ -344,11 +321,12 @@
         let currentPrediction = null;
         let isPromoter = false;
         
+        // 🎯 PROMOTER ADVANTAGE: Better multipliers
         const multipliers = {
-            low: { min: 2, max: 6, multiplier: 2 },
-            mid: { min: 7, max: 9, multiplier: 3 },
-            high: { min: 10, max: 12, multiplier: 2 },
-            double: { multiplier: 5 }
+            low: { min: 2, max: 6, multiplier: 2, promoterMultiplier: 4 },
+            mid: { min: 7, max: 9, multiplier: 2, promoterMultiplier: 8 },
+            high: { min: 10, max: 12, multiplier: 2, promoterMultiplier: 10 },
+            double: { multiplier: 5, promoterMultiplier: 20 }
         };
         
         function showWinPopup(amount) {
@@ -375,14 +353,9 @@
                     document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
                     if (isPromoter) {
                         document.getElementById('promoter-badge').style.display = 'inline-block';
-                        document.getElementById('multiplier').innerHTML = '2.5x';
                     }
                 }
             } catch (err) { console.error(err); }
-        }
-        
-        function rollDice() {
-            return Math.floor(Math.random() * 6) + 1;
         }
         
         async function playGame() {
@@ -395,7 +368,6 @@
                 return;
             }
             
-            // Deduct bet
             const token = localStorage.getItem('token');
             const betRes = await fetch(API + '/game/dice/bet', {
                 method: 'POST',
@@ -411,16 +383,14 @@
             currentUser.balance = betData.newBalance;
             document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
             
-            // Animate dice
             const dice1El = document.getElementById('dice1');
             const dice2El = document.getElementById('dice2');
             dice1El.classList.add('rolling');
             dice2El.classList.add('rolling');
             
-            // Random dice values
             setTimeout(() => {
-                const dice1 = rollDice();
-                const dice2 = rollDice();
+                const dice1 = Math.floor(Math.random() * 6) + 1;
+                const dice2 = Math.floor(Math.random() * 6) + 1;
                 const total = dice1 + dice2;
                 const isDouble = dice1 === dice2;
                 
@@ -433,9 +403,10 @@
                 let multiplier = 0;
                 let message = '';
                 
+                // 🎯 PROMOTER LOGIC: Better payouts
                 if (currentPrediction === 'double') {
                     if (isDouble) {
-                        multiplier = isPromoter ? 6 : 5;
+                        multiplier = isPromoter ? multipliers.double.promoterMultiplier : multipliers.double.multiplier;
                         win = true;
                         message = `🎉 DOUBLE! You rolled ${dice1} & ${dice2}!`;
                     } else {
@@ -445,8 +416,7 @@
                 } else {
                     const range = multipliers[currentPrediction];
                     if (total >= range.min && total <= range.max) {
-                        multiplier = isPromoter ? range.multiplier * 1.2 : range.multiplier;
-                        multiplier = Math.floor(multiplier * 10) / 10;
+                        multiplier = isPromoter ? range.promoterMultiplier : range.multiplier;
                         win = true;
                         message = `🎉 WIN! Total ${total} is in ${currentPrediction.toUpperCase()} range!`;
                     } else {
@@ -500,9 +470,9 @@
                     document.querySelectorAll('.bet-option[data-prediction]').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     currentPrediction = btn.dataset.prediction;
-                    const mult = multipliers[currentPrediction].multiplier;
-                    const finalMult = isPromoter ? mult * 1.2 : mult;
-                    document.getElementById('multiplier').innerHTML = Math.floor(finalMult * 10) / 10 + 'x';
+                    const mult = multipliers[currentPrediction];
+                    const finalMult = isPromoter ? mult.promoterMultiplier : mult.multiplier;
+                    document.getElementById('multiplier').innerHTML = finalMult + 'x';
                 };
             });
             document.querySelector('.bet-option[data-prediction="low"]').classList.add('active');
