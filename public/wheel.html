@@ -12,6 +12,30 @@
             --green: #008751;
             --red: #dc3545;
         }
+
+                /* Add at the top of each file's style section, after :root */
+        * {
+            font-size: 14px;  /* Base font size */
+        }
+
+        body {
+            font-size: 14px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+        .btn, button {
+            font-size: 0.9rem;
+            padding: 10px 20px;
+        }
+
+        .card, .game-container {
+            max-width: 90%;
+            margin: 10px auto;
+            padding: 15px;
+        }
         
         * {
             box-sizing: border-box;
@@ -281,9 +305,10 @@
         <a href="index.html" class="nav-link">🏠 Lobby</a>
         <a href="game.html" class="nav-link">🎮 Scratch</a>
         <a href="crash.html" class="nav-link">💥 Crash</a>
-        <a href="sudoku.html" class="nav-link">📊 Sudoku</a>
+        <a href="dice.html" class="nav-link">🎲 Dice</a>
+        <a href="slots.html" class="nav-link active">🎰 Slots</a>
         <a href="minesweeper.html" class="nav-link">💣 Minesweeper</a>
-        <a href="wheel.html" class="nav-link active">🎡 Wheel</a>
+        <a href="wheel.html" class="nav-link">🎡 Wheel</a>
         <a href="blackjack.html" class="nav-link">🃏 Blackjack</a>
     </div>
 
@@ -365,32 +390,32 @@
         const getSegments = (isPromoter) => {
             if (isPromoter) {
                 return [
-                    { name: "₦0", value: 0, color: "#666", probability: 0.05 },
-                    { name: "₦100", value: 100, color: "#4caf50", probability: 0.05 },
-                    { name: "₦500", value: 500, color: "#2196f3", probability: 0.08 },
-                    { name: "₦1,000", value: 1000, color: "#ff9800", probability: 0.10 },
-                    { name: "₦2,000", value: 2000, color: "#9c27b0", probability: 0.12 },
-                    { name: "₦5,000", value: 5000, color: "#e91e63", probability: 0.12 },
-                    { name: "₦10,000", value: 10000, color: "#00bcd4", probability: 0.12 },
+                    { name: "₦0", value: 0, color: "#666", probability: 0.9 },
+                    { name: "₦100", value: 100, color: "#4caf50", probability: 0.9 },
+                    { name: "₦500", value: 500, color: "#2196f3", probability: 0.8 },
+                    { name: "₦1,000", value: 1000, color: "#ff9800", probability: 0.4 },
+                    { name: "₦2,000", value: 2000, color: "#9c27b0", probability: 0.3 },
+                    { name: "₦5,000", value: 5000, color: "#e91e63", probability: 0.25 },
+                    { name: "₦10,000", value: 10000, color: "#00bcd4", probability: 0.2 },
                     { name: "₦25,000", value: 25000, color: "#ff5722", probability: 0.12 },
-                    { name: "₦50,000", value: 50000, color: "#ffc107", probability: 0.10 },
-                    { name: "₦100,000", value: 100000, color: "#d4af37", probability: 0.08 },
-                    { name: "JACKPOT!", value: 500000, color: "#ff6b6b", probability: 0.06 }
+                    { name: "₦50,000", value: 50000, color: "#ffc107", probability: 0.1 },
+                    { name: "₦100,000", value: 100000, color: "#d4af37", probability: 0.8 },
+                    { name: "JACKPOT!", value: 500000, color: "#ff6b6b", probability: 0.6 }
                 ];
             } else {
                 return [
                     { name: "₦0", value: 0, color: "#666", probability: 0.25 },
-                    { name: "₦100", value: 100, color: "#4caf50", probability: 0.15 },
-                    { name: "₦200", value: 200, color: "#2196f3", probability: 0.12 },
-                    { name: "₦500", value: 500, color: "#ff9800", probability: 0.10 },
+                    { name: "₦100", value: 100, color: "#4caf50", probability: 0.5 },
+                    { name: "₦200", value: 200, color: "#2196f3", probability: 0.2 },
+                    { name: "₦500", value: 500, color: "#ff9800", probability: 0.1 },
                     { name: "₦1,000", value: 1000, color: "#9c27b0", probability: 0.08 },
-                    { name: "₦2,000", value: 2000, color: "#e91e63", probability: 0.07 },
-                    { name: "₦5,000", value: 5000, color: "#00bcd4", probability: 0.06 },
-                    { name: "₦10,000", value: 10000, color: "#ff5722", probability: 0.05 },
-                    { name: "₦25,000", value: 25000, color: "#ffc107", probability: 0.04 },
-                    { name: "₦50,000", value: 50000, color: "#d4af37", probability: 0.03 },
-                    { name: "₦100,000", value: 100000, color: "#f44336", probability: 0.02 },
-                    { name: "JACKPOT!", value: 500000, color: "#ff6b6b", probability: 0.01 }
+                    { name: "₦2,000", value: 2000, color: "#e91e63", probability: 0.007 },
+                    { name: "₦5,000", value: 5000, color: "#00bcd4", probability: 0.006 },
+                    { name: "₦10,000", value: 10000, color: "#ff5722", probability: 0.005 },
+                    { name: "₦25,000", value: 25000, color: "#ffc107", probability: 0.004 },
+                    { name: "₦50,000", value: 50000, color: "#d4af37", probability: 0.003 },
+                    { name: "₦100,000", value: 100000, color: "#f44336", probability: 0.002 },
+                    { name: "JACKPOT!", value: 500000, color: "#ff6b6b", probability: 0.001 }
                 ];
             }
         };

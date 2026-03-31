@@ -13,6 +13,30 @@
             --red: #dc3545;
         }
         
+                /* Add at the top of each file's style section, after :root */
+        * {
+            font-size: 14px;  /* Base font size */
+        }
+
+        body {
+            font-size: 14px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+        .btn, button {
+            font-size: 0.9rem;
+            padding: 10px 20px;
+        }
+
+        .card, .game-container {
+            max-width: 90%;
+            margin: 10px auto;
+            padding: 15px;
+        }
+
         * {
             box-sizing: border-box;
             user-select: none;
@@ -297,11 +321,12 @@
 </head>
 <body>
     <div class="nav-bar">
-        <a href="index.html" class="nav-link">🏠 Lobby</a>
+         <a href="index.html" class="nav-link">🏠 Lobby</a>
         <a href="game.html" class="nav-link">🎮 Scratch</a>
         <a href="crash.html" class="nav-link">💥 Crash</a>
-        <a href="sudoku.html" class="nav-link">📊 Sudoku</a>
-        <a href="minesweeper.html" class="nav-link active">💣 Minesweeper</a>
+        <a href="dice.html" class="nav-link">🎲 Dice</a>
+        <a href="slots.html" class="nav-link active">🎰 Slots</a>
+        <a href="minesweeper.html" class="nav-link">💣 Minesweeper</a>
         <a href="wheel.html" class="nav-link">🎡 Wheel</a>
         <a href="blackjack.html" class="nav-link">🃏 Blackjack</a>
     </div>

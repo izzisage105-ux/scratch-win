@@ -13,6 +13,30 @@
             --green: #008751;
             --red: #dc3545;
         }
+
+                /* Add at the top of each file's style section, after :root */
+        * {
+            font-size: 14px;  /* Base font size */
+        }
+
+        body {
+            font-size: 14px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+        .btn, button {
+            font-size: 0.9rem;
+            padding: 10px 20px;
+        }
+
+        .card, .game-container {
+            max-width: 90%;
+            margin: 10px auto;
+            padding: 15px;
+        }
         
         * {
             box-sizing: border-box;
@@ -240,20 +264,50 @@
             cursor: pointer;
         }
         
-        .live-feed {
+                .live-feed {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--gold);
+            padding: 12px 24px;
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.95);
-            border-top: 1px solid var(--gold);
-            padding: 8px 20px;
-            display: flex;
-            gap: 20px;
-            overflow-x: auto;
-            z-index: 90;
+            z-index: 100;
+            overflow: hidden;
         }
-        
+
+        .ticker-container {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .ticker-wrapper {
+            display: inline-block;
+            white-space: nowrap;
+            animation: tickerScroll 20s linear infinite;
+        }
+
+        .ticker-item {
+            display: inline-block;
+            padding-right: 50px;
+            font-size: 14px;
+            font-weight: 500;
+            background: linear-gradient(90deg, var(--gold), #ffd700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        @keyframes tickerScroll {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
         .feed-item {
             display: inline-block;
             padding: 5px 15px;
@@ -338,9 +392,14 @@
     <div class="game-grid" id="game-grid"></div>
     
     <div class="live-feed">
-        <span>🔥 Live Wins:</span>
-        <div id="feed-items"></div>
+    <div class="ticker-container">
+        <div class="ticker-wrapper">
+            <div class="ticker-item" id="live-feed-item">
+                🔥 Welcome to Scratch & Win! Start playing now!
+            </div>
+        </div>
     </div>
+</div>
     
     <div id="deposit-modal" class="modal">
         <div class="modal-content">
@@ -361,13 +420,14 @@
         let currentUser = null;
         
         const games = [
-            { id: 'scratch', name: 'Scratch & Win', icon: '🎮', desc: 'Match 3 to win! Classic scratch card.', minBet: 150, maxWin: '₦50,000', hot: false, new: true, url: 'game.html' },
-            { id: 'crash', name: 'Crash Game', icon: '💥', desc: 'Cash out before the crash! Up to 1000x.', minBet: 100, maxWin: '₦500,000', hot: true, new: false, url: 'crash.html' },
-            { id: 'sudoku', name: 'Sudoku', icon: '📊', desc: 'Solve puzzles, earn prizes. Faster = bigger rewards!', minBet: 100, maxWin: '₦25,000', hot: false, new: false, url: 'sudoku.html' },
-            { id: 'minesweeper', name: 'Minesweeper', icon: '💣', desc: 'Avoid mines, clear the board.', minBet: 100, maxWin: '₦35,000', hot: false, new: true, url: 'minesweeper.html' },
-            { id: 'wheel', name: 'Wheel of Fortune', icon: '🎡', desc: 'Spin the wheel, win up to 500,000!', minBet: 100, maxWin: '₦500,000', hot: true, new: false, url: 'wheel.html' },
-            { id: 'blackjack', name: 'Blackjack', icon: '🃏', desc: 'Beat the dealer to 21.', minBet: 100, maxWin: '₦100,000', hot: false, new: false, url: 'blackjack.html' }
-        ];
+    { id: 'scratch', name: 'Scratch & Win', icon: '🎮', desc: 'Match 3 to win! Classic scratch card.', minBet: 150, maxWin: '₦50,000', hot: false, new: true, url: 'game.html' },
+    { id: 'crash', name: 'Crash Game', icon: '💥', desc: 'Cash out before the crash! Up to 1000x.', minBet: 100, maxWin: '₦500,000', hot: true, new: false, url: 'crash.html' },
+    { id: 'dice', name: 'Dice Game', icon: '🎲', desc: 'Predict the dice roll. Low, Mid, High, or Double!', minBet: 100, maxWin: '₦50,000', hot: true, new: true, url: 'dice.html' },
+    { id: 'slots', name: 'Slot Machine', icon: '🎰', desc: 'Spin the reels and match 3 to win big!', minBet: 100, maxWin: '₦500,000', hot: false, new: true, url: 'slots.html' },
+    { id: 'minesweeper', name: 'Minesweeper', icon: '💣', desc: 'Avoid mines, clear the board.', minBet: 100, maxWin: '₦35,000', hot: false, new: false, url: 'minesweeper.html' },
+    { id: 'wheel', name: 'Wheel of Fortune', icon: '🎡', desc: 'Spin the wheel, win up to 500,000!', minBet: 100, maxWin: '₦500,000', hot: true, new: false, url: 'wheel.html' },
+    { id: 'blackjack', name: 'Blackjack', icon: '🃏', desc: 'Beat the dealer to 21.', minBet: 100, maxWin: '₦100,000', hot: false, new: false, url: 'blackjack.html' }
+];
         
         async function loadUser() {
             const token = localStorage.getItem('token');
@@ -458,27 +518,41 @@
             window.location.href = 'auth.html';
         }
         
-        function startLiveFeed() {
-            const wins = [
-                { name: 'Efe', game: 'Crash', amount: 25000 },
-                { name: 'Tobi', game: 'Blackjack', amount: 5000 },
-                { name: 'Sade', game: 'Wheel', amount: 100000 },
-                { name: 'Uche', game: 'Minesweeper', amount: 15000 },
-                { name: 'Bisi', game: 'Sudoku', amount: 3000 }
-            ];
-            const feed = document.getElementById('feed-items');
-            function addWin() {
-                const win = wins[Math.floor(Math.random() * wins.length)];
-                const item = document.createElement('div');
-                item.className = 'feed-item win';
-                item.innerHTML = `🔥 ${win.name} won ₦${win.amount.toLocaleString()} on ${win.game}!`;
-                feed.appendChild(item);
-                while (feed.children.length > 10) feed.removeChild(feed.firstChild);
-                feed.scrollLeft = feed.scrollWidth;
-            }
-            setInterval(addWin, 8000);
-            wins.slice(0, 3).forEach(addWin);
-        }
+        // Winners ticker - rotates messages
+        const messages = [
+    "🔥 Efe just won ₦25,000 on Crash Game!",
+    "🎉 Tobi cashed out ₦50,000 on Wheel of Fortune!",
+    "💰 Sade hit JACKPOT of ₦100,000!",
+    "🃏 Uche got Blackjack and won ₦75,000!",
+    "💣 Bisi cleared all mines and won ₦15,000!",
+    "🎮 Musa won ₦5,000 on Scratch & Win!",
+    "🌟 Promoter Ada won ₦200,000 on Crash!",
+    "🎡 Chidi spun the wheel and won ₦50,000!",
+    "🎲 Kunle rolled double 6's and won ₦10,000!",
+    "🎰 Amarachi hit triple diamonds on slots!",
+    "💎 New player just won ₦20,000!",
+    "🏆 Daily jackpot climbing to ₦500,000!"
+];
+
+let messageIndex = 0;
+const ticker = document.querySelector('.ticker-wrapper');
+
+function updateTicker() {
+    // Create new message and append
+    const newItem = document.createElement('span');
+    newItem.className = 'ticker-item';
+    newItem.textContent = '  ' + messages[messageIndex] + '  ';
+    ticker.appendChild(newItem);
+    messageIndex = (messageIndex + 1) % messages.length;
+    
+    // Keep only last 10 items to prevent overflow
+    while (ticker.children.length > 10) {
+        ticker.removeChild(ticker.firstChild);
+    }
+}
+
+// Add new message every 8 seconds
+setInterval(updateTicker, 8000);
         
         document.getElementById('deposit-btn').onclick = () => document.getElementById('deposit-modal').style.display = 'flex';
         document.getElementById('history-btn').onclick = () => window.location.href = 'game-history.html';
