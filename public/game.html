@@ -659,15 +659,30 @@
     </div>
   </div>
 
-  <!-- BANK PAYMENT SCREEN -->
+    <!-- BANK PAYMENT SCREEN -->
   <div id="bank-screen" class="screen">
     <div class="content-card">
-      <h3>🏦 PAYMENT DESK</h3>
-      <div id="bank-details" style="background:#f5f5f5; padding:15px; border-radius:10px; margin:20px 0;">
+      <h3>🏦 SEND PAYMENT</h3>
+      
+      <div id="bank-details" style="background:#f5f5f5; padding:20px; border-radius:10px; margin:20px 0; text-align: center;">
         <!-- Dynamically filled -->
       </div>
-      <button class="btn" onclick="confirmPayment()">✅ I HAVE PAID</button>
-      <p onclick="closeScreens()" style="cursor:pointer; font-size:13px; color:gray; margin-top:20px;">Cancel</p>
+
+      <!-- Timer Section -->
+      <div id="timer-section" style="margin: 15px 0;">
+        <p style="font-size: 14px; color: #666;">Please confirm payment after sending:</p>
+        <div id="timer-countdown" style="font-size: 32px; font-weight: bold; color: #d4af37; margin: 10px 0;">
+          0
+        </div>
+        <button id="confirm-payment-btn" class="btn" onclick="confirmPayment()" style="background: #008751; display: none;">
+          ✅ I CONFIRM PAYMENT
+        </button>
+        <p style="font-size: 12px; color: #999; margin-top: 10px;">⏱️ Wait 30 seconds before confirming to allow processing</p>
+      </div>
+
+      <button class="btn" style="background:#dc3545; margin-top: 10px;" onclick="closeScreens()">
+        ❌ CANCEL
+      </button>
     </div>
   </div>
 
@@ -704,6 +719,7 @@
       depositTier: null
     };
 
+    
     // ========== TOKEN CHECK ==========
     (function checkToken() {
       const token = localStorage.getItem('token');
@@ -1103,33 +1119,110 @@
       }
     }
 
-    // ========== DEPOSIT ==========
+      // ========== DEPOSIT ==========
+    let currentDepositAmount = null;
+    let depositTimer = null;
+    let timerSeconds = 0;
+
     function showBank(amount) {
+      currentDepositAmount = amount;
       state.depositTier = amount;
       closeScreens();
+      
       const bankScreen = document.getElementById('bank-screen');
       const bankDetails = document.getElementById('bank-details');
+      
+      // Generate unique transaction reference
+      const txRef = 'DEP' + Date.now() + Math.floor(Math.random() * 10000);
+      
       bankDetails.innerHTML = `
-        <p style="margin:0 0 10px; font-weight:bold;">Transfer ₦${amount.toLocaleString()} to:</p>
-        <p style="background:#000; color:#d4af37; padding:12px; border-radius:8px;">
-          <b>KUDA BANK<br>2022675714<br>IYANDA ISREAL</b>
-        </p>
-        <p style="font-size:13px; margin-top:15px;">After payment, click "I HAVE PAID". Admin will verify.</p>
+        <p style="margin:0 0 10px; font-weight:bold; color:#333;">Transfer ₦${amount.toLocaleString()} to:</p>
+        <div style="background:#000; color:#d4af37; padding:15px; border-radius:10px; margin:15px 0;">
+          <div style="font-size:12px; color:#999;">BANK NAME</div>
+          <div style="font-weight:bold; font-size:18px;">KUDA BANK</div>
+          <div style="font-size:12px; color:#999; margin-top:10px;">ACCOUNT NUMBER</div>
+          <div style="font-weight:bold; font-size:24px; letter-spacing:2px;">2022675714</div>
+          <div style="font-size:12px; color:#999; margin-top:10px;">ACCOUNT NAME</div>
+          <div style="font-weight:bold; font-size:16px;">IYANDA ISREAL</div>
+        </div>
+        <div style="background:#f0f0f0; padding:10px; border-radius:8px; margin-top:15px;">
+          <p style="font-size:12px; margin:0;">📝 Your Reference: <strong style="color:#d4af37;">${txRef}</strong></p>
+          <p style="font-size:11px; color:#666; margin:5px 0 0;">Use this reference when contacting support</p>
+        </div>
       `;
+      
+      // Reset and start timer
+      resetDepositTimer();
+      startDepositTimer();
+      
       bankScreen.classList.add('visible');
+      
+      // Store ref for later use
+      window.currentTxRef = txRef;
+    }
+
+    function resetDepositTimer() {
+      if (depositTimer) {
+        clearInterval(depositTimer);
+        depositTimer = null;
+      }
+      timerSeconds = 0;
+      const confirmBtn = document.getElementById('confirm-payment-btn');
+      const timerDisplay = document.getElementById('timer-countdown');
+      if (confirmBtn) confirmBtn.style.display = 'none';
+      if (timerDisplay) timerDisplay.textContent = '0';
+    }
+
+    function startDepositTimer() {
+      const confirmBtn = document.getElementById('confirm-payment-btn');
+      const timerDisplay = document.getElementById('timer-countdown');
+      
+      timerSeconds = 30; // 30 seconds countdown
+      
+      depositTimer = setInterval(() => {
+        if (timerSeconds <= 0) {
+          // Timer finished - enable confirm button
+          clearInterval(depositTimer);
+          depositTimer = null;
+          if (confirmBtn) {
+            confirmBtn.style.display = 'block';
+            confirmBtn.style.background = '#d4af37';
+            confirmBtn.style.color = '#000';
+          }
+          if (timerDisplay) {
+            timerDisplay.textContent = 'READY ✓';
+            timerDisplay.style.color = '#00ff00';
+          }
+        } else {
+          timerSeconds--;
+          if (timerDisplay) {
+            timerDisplay.textContent = `⏳ ${timerSeconds}s`;
+            timerDisplay.style.color = '#d4af37';
+          }
+        }
+      }, 1000);
     }
 
     async function confirmPayment() {
-      const amount = state.depositTier;
+      const amount = currentDepositAmount || state.depositTier;
       if (!amount) {
         alert('Please select a deposit amount');
         return;
       }
       
+      // Check if timer is done
+      if (timerSeconds > 0) {
+        alert(`Please wait ${timerSeconds} seconds before confirming payment.`);
+        return;
+      }
+      
       const token = localStorage.getItem('token');
-      const btn = document.querySelector('#bank-screen .btn');
-      btn.disabled = true;
-      btn.textContent = 'PROCESSING...';
+      const confirmBtn = document.getElementById('confirm-payment-btn');
+      
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'PROCESSING...';
+      }
       
       try {
         const res = await fetch(API + '/deposit/request', {
@@ -1139,26 +1232,30 @@
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            amount,
-            paymentProof: 'Bank Transfer - Awaiting verification'
+            amount: amount,
+            paymentProof: `Bank Transfer - Ref: ${window.currentTxRef || 'N/A'} - Awaiting verification`
           })
         });
         
         const data = await res.json();
         
         if (data.success) {
-          alert(`✅ Deposit request submitted!\nAmount: ₦${amount.toLocaleString()}\nAdmin will approve.`);
+          playSound('deposit');
+          alert(`✅ Deposit Request Submitted!\n\nAmount: ₦${amount.toLocaleString()}\nReference: ${window.currentTxRef || 'N/A'}\n\nAdmin will verify and credit your wallet.`);
           closeScreens();
+          resetDepositTimer();
           loadUser();
         } else {
-          alert(data.message);
+          alert(data.message || 'Deposit request failed');
         }
       } catch (err) {
-        console.error('❌ ERROR:', err);
-        alert('Network error');
+        console.error('Deposit error:', err);
+        alert('Network error. Please try again.');
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'I HAVE PAID';
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = '✅ I CONFIRM PAYMENT';
+        }
       }
     }
 
