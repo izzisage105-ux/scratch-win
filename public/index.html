@@ -401,23 +401,46 @@
     </div>
 </div>
     
+        <!-- DEPOSIT AMOUNT SELECTOR (first step) -->
     <div id="deposit-modal" class="modal">
         <div class="modal-content">
-            <h2 style="color: var(--gold);">💰 Deposit</h2>
-            <p>Select amount to deposit</p>
+            <h2 style="color: var(--gold);">💰 Select Amount</h2>
+            <p>Choose how much to deposit</p>
             <div style="margin: 20px 0;">
-                <button class="btn-header" onclick="deposit(1000)" style="margin: 5px;">₦1,000</button>
-                <button class="btn-header" onclick="deposit(5000)" style="margin: 5px;">₦5,000</button>
-                <button class="btn-header" onclick="deposit(10000)" style="margin: 5px;">₦10,000</button>
-                <button class="btn-header" onclick="deposit(50000)" style="margin: 5px;">₦50,000</button>
+                <button class="btn-header" onclick="showBank(1000)" style="margin: 5px;">₦1,000</button>
+                <button class="btn-header" onclick="showBank(5000)" style="margin: 5px;">₦5,000</button>
+                <button class="btn-header" onclick="showBank(10000)" style="margin: 5px;">₦10,000</button>
+                <button class="btn-header" onclick="showBank(50000)" style="margin: 5px;">₦50,000</button>
             </div>
-            <button class="play-btn" onclick="closeDepositModal()" style="background: #333;">Close</button>
+            <button class="play-btn" onclick="closeDepositModal()" style="background: #333;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- BANK DETAILS + TIMER MODAL (second step) -->
+    <div id="bank-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: var(--gold);">🏦 SEND PAYMENT</h3>
+            <div id="bank-details" style="background:#222; padding:15px; border-radius:10px; margin:15px 0; text-align:center;">
+                <!-- Dynamically filled -->
+            </div>
+            <div id="timer-section" style="margin: 15px 0;">
+                <p style="font-size: 14px;">Please confirm after sending:</p>
+                <div id="timer-countdown" style="font-size: 32px; font-weight: bold; color: var(--gold); margin: 10px 0;">0</div>
+                <button id="confirm-payment-btn" class="play-btn" onclick="confirmPayment()" style="background: var(--green); display: none;">✅ I CONFIRM PAYMENT</button>
+                <p style="font-size: 12px; color: #ccc;">⏱️ Wait 30 seconds before confirming</p>
+            </div>
+            <button class="play-btn" onclick="closeBankModal()" style="background: #333;">Cancel</button>
         </div>
     </div>
 
     <script>
         const API = window.location.origin;
         let currentUser = null;
+
+        // Deposit timer variables
+        let currentDepositAmount = null;
+        let depositTimer = null;
+        let timerSeconds = 0;
         
         const games = [
     { id: 'scratch', name: 'Scratch & Win', icon: '🎮', desc: 'Match 3 to win! Classic scratch card.', minBet: 150, maxWin: '₦50,000', hot: false, new: true, url: 'game.html' },
@@ -486,8 +509,89 @@
             }
         }
         
-        async function deposit(amount) {
+                // ========== DEPOSIT WITH TIMER ==========
+        function showBank(amount) {
+            currentDepositAmount = amount;
+            closeDepositModal();
+            
+            const bankModal = document.getElementById('bank-modal');
+            const bankDetails = document.getElementById('bank-details');
+            
+            const txRef = 'DEP' + Date.now() + Math.floor(Math.random() * 10000);
+            
+            bankDetails.innerHTML = `
+                <p style="margin:0 0 10px; font-weight:bold;">Transfer ₦${amount.toLocaleString()} to:</p>
+                <div style="background:#000; color:var(--gold); padding:12px; border-radius:8px;">
+                    <b>KUDA BANK<br>2022675714<br>IYANDA ISREAL</b>
+                </div>
+                <div style="margin-top:15px; font-size:12px;">
+                    📝 Your Reference: <strong style="color:var(--gold);">${txRef}</strong>
+                </div>
+            `;
+            
+            resetDepositTimer();
+            startDepositTimer();
+            bankModal.style.display = 'flex';
+            window.currentTxRef = txRef;
+        }
+        
+        function resetDepositTimer() {
+            if (depositTimer) {
+                clearInterval(depositTimer);
+                depositTimer = null;
+            }
+            timerSeconds = 0;
+            const confirmBtn = document.getElementById('confirm-payment-btn');
+            const timerDisplay = document.getElementById('timer-countdown');
+            if (confirmBtn) confirmBtn.style.display = 'none';
+            if (timerDisplay) timerDisplay.textContent = '0';
+        }
+        
+        function startDepositTimer() {
+            const confirmBtn = document.getElementById('confirm-payment-btn');
+            const timerDisplay = document.getElementById('timer-countdown');
+            timerSeconds = 30;
+            depositTimer = setInterval(() => {
+                if (timerSeconds <= 0) {
+                    clearInterval(depositTimer);
+                    depositTimer = null;
+                    if (confirmBtn) {
+                        confirmBtn.style.display = 'block';
+                        confirmBtn.style.background = 'var(--gold)';
+                        confirmBtn.style.color = '#000';
+                    }
+                    if (timerDisplay) {
+                        timerDisplay.textContent = 'READY ✓';
+                        timerDisplay.style.color = '#00ff00';
+                    }
+                } else {
+                    timerSeconds--;
+                    if (timerDisplay) {
+                        timerDisplay.textContent = `⏳ ${timerSeconds}s`;
+                        timerDisplay.style.color = 'var(--gold)';
+                    }
+                }
+            }, 1000);
+        }
+        
+        async function confirmPayment() {
+            const amount = currentDepositAmount;
+            if (!amount) {
+                alert('Please select an amount');
+                return;
+            }
+            if (timerSeconds > 0) {
+                alert(`Please wait ${timerSeconds} seconds before confirming.`);
+                return;
+            }
+            
             const token = localStorage.getItem('token');
+            const confirmBtn = document.getElementById('confirm-payment-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'PROCESSING...';
+            }
+            
             try {
                 const res = await fetch(API + '/deposit/request', {
                     method: 'POST',
@@ -495,22 +599,38 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ amount, paymentProof: 'Bank Transfer' })
+                    body: JSON.stringify({
+                        amount: amount,
+                        paymentProof: `Bank Transfer - Ref: ${window.currentTxRef || 'N/A'}`
+                    })
                 });
                 const data = await res.json();
                 if (data.success) {
                     alert(`✅ Deposit request submitted for ₦${amount.toLocaleString()}!`);
-                    closeDepositModal();
+                    closeBankModal();
+                    resetDepositTimer();
+                    loadUser(); // refresh balance
                 } else {
                     alert(data.message);
                 }
             } catch (err) {
                 alert('Network error');
+            } finally {
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '✅ I CONFIRM PAYMENT';
+                }
             }
         }
         
         function closeDepositModal() {
             document.getElementById('deposit-modal').style.display = 'none';
+        }
+        
+        function closeBankModal() {
+            const bankModal = document.getElementById('bank-modal');
+            if (bankModal) bankModal.style.display = 'none';
+            resetDepositTimer();
         }
         
         function logout() {
@@ -558,7 +678,12 @@ setInterval(updateTicker, 8000);
         document.getElementById('deposit-btn').onclick = () => document.getElementById('deposit-modal').style.display = 'flex';
         document.getElementById('history-btn').onclick = () => window.location.href = 'game-history.html';
         document.getElementById('logout-btn').onclick = logout;
-        window.onclick = (e) => { if (e.target === document.getElementById('deposit-modal')) closeDepositModal(); };
+        window.onclick = (e) => {
+            const depositModal = document.getElementById('deposit-modal');
+            const bankModal = document.getElementById('bank-modal');
+            if (e.target === depositModal) closeDepositModal();
+            if (e.target === bankModal) closeBankModal();
+        };
         
         async function init() {
             await loadUser();
