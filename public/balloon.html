@@ -400,17 +400,38 @@
         let balloonCount = 0;
         let safeBalloonsPopped = 0;
         
-        // FIXED: Reduced multipliers and safer values
-        const multipliers = {
-            normal: [1.1, 1.2, 1.3, 1.5, 1.8, 2.0],  // Max 2x for normal users
-            promoter: [1.2, 1.5, 1.8, 2.0, 2.5, 3.0]    // Max 3x for promoters
-        };
-        
         // FIXED: Bomb chance (much safer)
         // Normal users: 40% bomb chance (was 80% - too harsh)
         // Promoters: 5% bomb chance
-        const bombChance = () => isPromoter ? 0.05 : 0.40;
+        const bombChance = () => isPromoter ? 0.05 : 0.70;
         
+// NEW: Capped winnings - Max ₦500 per pop
+function getBalloonValue(bet, isPromoter) {
+    const commonValues = [100, 150];
+    const uncommonValues = [200, 250];
+    const rareValues = [300, 400, 500];
+    
+    if (isPromoter) {
+        const rand = Math.random();
+        if (rand < 0.5) {
+            return commonValues[Math.floor(Math.random() * commonValues.length)];
+        } else if (rand < 0.75) {
+            return uncommonValues[Math.floor(Math.random() * uncommonValues.length)];
+        } else {
+            return rareValues[Math.floor(Math.random() * rareValues.length)];
+        }
+    } else {
+        const rand = Math.random();
+        if (rand < 0.65) {
+            return commonValues[Math.floor(Math.random() * commonValues.length)];
+        } else if (rand < 0.85) {
+            return uncommonValues[Math.floor(Math.random() * uncommonValues.length)];
+        } else {
+            return rareValues[Math.floor(Math.random() * rareValues.length)];
+        }
+    }
+}
+
         // FIXED: Max balloons on screen (prevents overload)
         const MAX_BALLOONS = 12;
         
@@ -521,7 +542,7 @@
             }
         }
         
-        function createBalloon() {
+    function createBalloon() {
     if (!gameActive) return;
     
     const gameArea = document.getElementById('game-area');
@@ -550,9 +571,7 @@
         // Store bomb flag but NO visual indicator
         balloon.dataset.isBomb = 'true';
     } else {
-        const multArray = isPromoter ? multipliers.promoter : multipliers.normal;
-        multiplier = multArray[Math.floor(Math.random() * multArray.length)];
-        balloonValue = Math.floor(currentBet * multiplier);
+        balloonValue = getBalloonValue(currentBet, isPromoter);
         balloon.dataset.isBomb = 'false';
         balloon.dataset.value = balloonValue;
         balloon.dataset.multiplier = multiplier;
