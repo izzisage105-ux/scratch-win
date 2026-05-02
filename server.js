@@ -1917,6 +1917,37 @@ app.post("/game/balloon/win", authMiddleware, async (req, res) => {
     }
 });
 
+// Balloon game win endpoint
+app.post("/game/balloon-win", authMiddleware, async (req, res) => {
+    try {
+        const { winAmount, bet } = req.body;
+        
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('realBalance')
+            .eq('id', req.user.id)
+            .single();
+            
+        if (userError || !user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        
+        const newBalance = user.realBalance + winAmount;
+        
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', req.user.id);
+            
+        if (updateError) throw updateError;
+        
+        res.json({ success: true, newBalance });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
 // ========== CRASH GAME ROUTES ==========
 app.post("/game/crash/bet", authMiddleware, async (req, res) => {
     try {

@@ -145,17 +145,7 @@
             height: 18px;
             background: #8B4513;
         }
-        
-        .balloon.bomb {
-            background: radial-gradient(circle at 30% 30%, #8B0000, #4a0000);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,0,0,0.3);
-        }
-
-        .balloon.bomb::before {
-            display: none;
-        }
-        
+             
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-12px); }
@@ -408,36 +398,45 @@
         let currentWin = 0;
         let timeLeft = 12;
         let balloonCount = 0;
+        let safeBalloonsPopped = 0;
         
-        // 🎯 Updated multipliers (hidden until popped)
+        // FIXED: Reduced multipliers and safer values
         const multipliers = {
-            normal: [1.12, 1.15, 1.2, 1.3, 1.5, 2.5],
-            promoter: [1.5, 2, 2.5, 3, 4, 5, 7, 10]
+            normal: [1.1, 1.2, 1.3, 1.5, 1.8, 2.0],  // Max 2x for normal users
+            promoter: [1.2, 1.5, 1.8, 2.0, 2.5, 3.0]    // Max 3x for promoters
         };
         
-        // Bomb chance: Normal 80%, Promoter 2%
-        const bombChance = () => isPromoter ? 0.02 : 0.80;
+        // FIXED: Bomb chance (much safer)
+        // Normal users: 40% bomb chance (was 80% - too harsh)
+        // Promoters: 5% bomb chance
+        const bombChance = () => isPromoter ? 0.05 : 0.40;
+        
+        // FIXED: Max balloons on screen (prevents overload)
+        const MAX_BALLOONS = 12;
         
         function showWinPopup(amount) {
             document.getElementById('win-amount').innerText = amount.toLocaleString();
             document.getElementById('win-popup').style.display = 'flex';
-            setTimeout(closeWinPopup, 3000);
         }
         
         function closeWinPopup() {
             document.getElementById('win-popup').style.display = 'none';
         }
         
-        function showValuePopup(x, y, value, isBomb) {
+        function showValuePopup(balloon, value, isBomb) {
+            const rect = balloon.getBoundingClientRect();
             const gameArea = document.getElementById('game-area');
+            const areaRect = gameArea.getBoundingClientRect();
+            const x = rect.left - areaRect.left + rect.width / 2;
+            const y = rect.top - areaRect.top;
+            
             const popup = document.createElement('div');
             popup.className = 'value-popup';
             popup.style.left = x + 'px';
             popup.style.top = y + 'px';
             if (isBomb) {
-                popup.textContent = '💣 BOMB!';
+                popup.textContent = '💣 -' + currentBet.toLocaleString();
                 popup.style.color = '#ff6b6b';
-                popup.style.fontSize = '20px';
             } else {
                 popup.textContent = `+₦${value.toLocaleString()}`;
                 popup.style.color = '#ffd700';
@@ -465,117 +464,166 @@
             } catch (err) { console.error(err); }
         }
         
-        function createBalloon() {
-            if (!gameActive) return;
+        async function deductBet() {
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(API + '/game/balloon/bet', {  // ✅ Use balloon/bet
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ amount: currentBet })
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentUser.balance = data.newBalance;
+            document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+            return true;
+        } else {
+            alert(data.message);
+            return false;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Network error');
+        return false;
+    }
+}
+        
+        async function creditWin(winAmount) {
+            if (winAmount <= 0) return false;
             
-            const gameArea = document.getElementById('game-area');
-            const areaRect = gameArea.getBoundingClientRect();
-            
-            const balloon = document.createElement('div');
-            balloon.className = 'balloon';
-            
-            // Determine if bomb or normal balloon
-            const isBomb = Math.random() < bombChance();
-            let multiplier = 0;
-            let balloonValue = 0;
-            
-            if (isBomb) {
-                balloon.classList.add('bomb');
-                balloonValue = 0;
-            } else {
-                // Select random multiplier from available pool (hidden until popped)
-                const multArray = isPromoter ? multipliers.promoter : multipliers.normal;
-                multiplier = multArray[Math.floor(Math.random() * multArray.length)];
-                balloonValue = currentBet * multiplier;
-                // Random balloon color - no text visible
-                const colors = ['#ff6b6b', '#ff8c69', '#ffa07a', '#ff7b7b', '#ff5e5e'];
-                const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                balloon.style.background = `radial-gradient(circle at 30% 30%, ${randomColor}, ${randomColor}dd)`;
-            }
-            
-            // Random position within game area (avoid edges)
-            const maxX = areaRect.width - 80;
-            const maxY = areaRect.height - 95;
-            const x = Math.max(10, Math.random() * maxX);
-            const y = Math.max(10, Math.random() * maxY);
-            
-            balloon.style.left = x + 'px';
-            balloon.style.top = y + 'px';
-            
-            // Store data in balloon element (hidden until popped)
-            balloon.dataset.value = balloonValue;
-            balloon.dataset.multiplier = multiplier;
-            balloon.dataset.isBomb = isBomb;
-            balloon.dataset.x = x;
-            balloon.dataset.y = y;
-            balloon.dataset.id = balloonCount++;
-            
-            balloon.onclick = (e) => {
-                e.stopPropagation();
-                popBalloon(balloon);
-            };
-            
-            gameArea.appendChild(balloon);
-            
-            // Auto-remove balloon after 5 seconds if not popped
-            setTimeout(() => {
-                if (balloon.parentNode && gameActive) {
-                    balloon.remove();
+            const token = localStorage.getItem('token');
+            try {
+                // Use the existing game/play with win result
+                const res = await fetch(API + '/game/balloon-win', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        winAmount: winAmount,
+                        bet: currentBet
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser.balance = data.newBalance;
+                    document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+                    return true;
                 }
-            }, 5000);
+                return false;
+            } catch (err) {
+                console.error(err);
+                return false;
+            }
         }
         
-        async function popBalloon(balloon) {
-            if (!gameActive) return;
-            
-            const isBomb = balloon.dataset.isBomb === 'true';
-            const multiplier = parseFloat(balloon.dataset.multiplier);
-            const value = parseFloat(balloon.dataset.value);
-            const x = parseFloat(balloon.dataset.x);
-            const y = parseFloat(balloon.dataset.y);
-            
-            // Show value popup at balloon position
-            showValuePopup(x, y, value, isBomb);
-            
-            // Add pop animation
-            balloon.classList.add('popping');
-            
-            setTimeout(() => {
-                if (balloon.parentNode) balloon.remove();
-            }, 150);
-            
-            if (isBomb) {
-                // BOMB! Game over - lose everything
-                gameActive = false;
-                clearInterval(gameInterval);
-                clearInterval(timerInterval);
-                
-                const finalWin = currentWin;
-                document.getElementById('result').innerHTML = `💥 BOMB! You lost ₦${(currentWin + currentBet).toLocaleString()}! Game over. 💥`;
-                document.getElementById('result').style.color = '#ff8888';
-                document.getElementById('start-btn').disabled = false;
-                
-                await endGame(false, 0);
-                return;
-            }
-            
-            // Add to running total
-            currentWin += value;
-            document.getElementById('running-total').innerText = currentWin.toLocaleString();
-            document.getElementById('current-win').innerText = currentWin.toLocaleString();
-            
-            // Spawn new balloon after 4-5 seconds to replace popped one
-            setTimeout(() => {
-                if (gameActive) {
-                    createBalloon();
-                }
-            }, 4000 + Math.random() * 1000);
+        function createBalloon() {
+    if (!gameActive) return;
+    
+    const gameArea = document.getElementById('game-area');
+    const currentBalloons = gameArea.querySelectorAll('.balloon').length;
+    if (currentBalloons >= MAX_BALLOONS) return;
+    
+    const areaRect = gameArea.getBoundingClientRect();
+    if (areaRect.width === 0) return;
+    
+    const balloon = document.createElement('div');
+    balloon.className = 'balloon';
+    
+    // Determine if bomb or normal balloon
+    const isBomb = Math.random() < bombChance();
+    let multiplier = 0;
+    let balloonValue = 0;
+    
+    // ALL BALLOONS LOOK IDENTICAL - Random happy colors only (no red/black)
+    const colors = ['#ff6b6b', '#ff8c69', '#ffa07a', '#69db7e', '#4dabf7', '#ffd93d', '#c084fc', '#2dd4bf'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    balloon.style.background = `radial-gradient(circle at 35% 35%, ${randomColor}, ${randomColor}dd)`;
+    
+    if (isBomb) {
+        // Bomb looks exactly the same as winning balloon - no visual difference!
+        balloonValue = 0;
+        // Store bomb flag but NO visual indicator
+        balloon.dataset.isBomb = 'true';
+    } else {
+        const multArray = isPromoter ? multipliers.promoter : multipliers.normal;
+        multiplier = multArray[Math.floor(Math.random() * multArray.length)];
+        balloonValue = Math.floor(currentBet * multiplier);
+        balloon.dataset.isBomb = 'false';
+        balloon.dataset.value = balloonValue;
+        balloon.dataset.multiplier = multiplier;
+    }
+    
+    // Random position within game area
+    const maxX = Math.max(50, areaRect.width - 80);
+    const maxY = Math.max(50, areaRect.height - 95);
+    const x = Math.max(5, Math.random() * maxX);
+    const y = Math.max(5, Math.random() * maxY);
+    
+    balloon.style.left = x + 'px';
+    balloon.style.top = y + 'px';
+    balloon.style.position = 'absolute';
+    
+    balloon.onclick = (e) => {
+        e.stopPropagation();
+        popBalloon(balloon);
+    };
+    
+    gameArea.appendChild(balloon);
+    
+    // Auto-remove balloon after 4 seconds
+    setTimeout(() => {
+        if (balloon.parentNode && gameActive) {
+            balloon.remove();
         }
+    }, 4000);
+}
+        
+        async function popBalloon(balloon) {
+    if (!gameActive) return;
+    
+    const isBomb = balloon.dataset.isBomb === 'true';
+    const value = parseFloat(balloon.dataset.value) || 0;
+    
+    showValuePopup(balloon, value, isBomb);
+    
+    balloon.classList.add('popping');
+    setTimeout(() => {
+        if (balloon.parentNode) balloon.remove();
+    }, 150);
+    
+    if (isBomb) {
+        // BOMB! Lose everything
+        gameActive = false;
+        clearInterval(gameInterval);
+        clearInterval(timerInterval);
+        
+        document.getElementById('result').innerHTML = `💥 BOMB! You lost ₦${currentBet.toLocaleString()}! Game over. 💥`;
+        document.getElementById('result').style.color = '#ff8888';
+        document.getElementById('start-btn').disabled = false;
+        return;
+    }
+    
+    // Add to running total
+    currentWin += value;
+    document.getElementById('running-total').innerText = currentWin.toLocaleString();
+    document.getElementById('current-win').innerText = currentWin.toLocaleString();
+    
+    // Spawn replacement balloon after delay
+    setTimeout(() => {
+        if (gameActive) {
+            createBalloon();
+        }
+    }, 2000);
+}
         
         function spawnBalloons() {
             if (!gameActive) return;
-            // Spawn 2-4 balloons at a time
-            const count = Math.floor(Math.random() * 3) + 2;
+            const count = Math.floor(Math.random() * 2) + 1; // 1-2 balloons (reduced from 2-4)
             for (let i = 0; i < count; i++) {
                 createBalloon();
             }
@@ -588,30 +636,20 @@
                 return;
             }
             
-            // Deduct bet
-            const token = localStorage.getItem('token');
-            const betRes = await fetch(API + '/game/balloon/bet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amount: currentBet })
-            });
-            const betData = await betRes.json();
-            if (!betData.success) {
-                alert(betData.message);
-                return;
-            }
-            
-            currentUser.balance = betData.newBalance;
-            document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
+            // Deduct bet using backend
+            const betSuccess = await deductBet();
+            if (!betSuccess) return;
             
             // Reset game state
             gameActive = true;
             currentWin = 0;
+            safeBalloonsPopped = 0;
             timeLeft = 12;
             balloonCount = 0;
             document.getElementById('running-total').innerText = '0';
             document.getElementById('current-win').innerText = '0';
             document.getElementById('result').innerHTML = '🎈 Pop balloons! Avoid bombs! 🎈';
+            document.getElementById('result').style.color = 'white';
             document.getElementById('start-btn').disabled = true;
             
             // Clear game area
@@ -629,68 +667,46 @@
                 timerFill.style.width = Math.max(0, percent) + '%';
                 
                 if (timeLeft <= 0) {
-                    // Time's up! End game with current winnings
                     clearInterval(timerInterval);
                     clearInterval(gameInterval);
                     gameActive = false;
-                    endGame(true, currentWin);
+                    
+                    // Time's up! Credit winnings
+                    if (currentWin > 0) {
+                        creditWin(currentWin);
+                        document.getElementById('result').innerHTML = `🎉 TIME'S UP! You won ₦${currentWin.toLocaleString()}! 🎉`;
+                        document.getElementById('result').style.color = '#d4af37';
+                        if (currentWin > 0) showWinPopup(currentWin);
+                    } else {
+                        document.getElementById('result').innerHTML = `⏰ Time's up! No balloons popped.`;
+                        document.getElementById('result').style.color = '#ffaa00';
+                    }
+                    document.getElementById('start-btn').disabled = false;
                 }
             }, 100);
             
-            // Start spawning balloons every 2 seconds
+            // Start spawning balloons
             gameInterval = setInterval(() => {
                 if (gameActive) {
                     spawnBalloons();
                 }
-            }, 2000);
+            }, 2500);
             
             // Initial balloons
             spawnBalloons();
             spawnBalloons();
         }
         
-        async function endGame(isWin, winAmount) {
-            gameActive = false;
-            document.getElementById('start-btn').disabled = false;
-            
-            if (timerInterval) clearInterval(timerInterval);
-            if (gameInterval) clearInterval(gameInterval);
-            
-            // Clear remaining balloons
-            const gameArea = document.getElementById('game-area');
-            gameArea.innerHTML = '';
-            
-            if (isWin && winAmount > 0) {
-                const token = localStorage.getItem('token');
-                const winRes = await fetch(API + '/game/balloon/win', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ prize: winAmount, bet: currentBet })
-                });
-                const winData = await winRes.json();
-                if (winData.success) {
-                    currentUser.balance = winData.newBalance;
-                    document.getElementById('balance').innerText = currentUser.balance.toLocaleString();
-                    document.getElementById('result').innerHTML = `🎉 TIME'S UP! You won ₦${winAmount.toLocaleString()}! 🎉`;
-                    document.getElementById('result').style.color = '#d4af37';
-                    if (winAmount > 0) showWinPopup(winAmount);
-                }
-            } else if (winAmount === 0 && !isWin) {
-                document.getElementById('result').innerHTML = `💥 BOMB! You lost your bet. Try again! 💥`;
-                document.getElementById('result').style.color = '#ff8888';
-            }
-        }
-        
         function initBetButtons() {
             document.querySelectorAll('.bet-btn').forEach(btn => {
                 btn.onclick = () => {
+                    if (gameActive) return;
                     document.querySelectorAll('.bet-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     currentBet = parseInt(btn.dataset.bet);
                     document.getElementById('bet-amount').innerText = currentBet.toLocaleString();
                 };
             });
-            document.querySelector('.bet-btn[data-bet="100"]').classList.add('active');
         }
         
         document.getElementById('start-btn').onclick = startGame;
