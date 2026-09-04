@@ -2001,6 +2001,61 @@ app.post("/game/crash/result", authMiddleware, async (req, res) => {
     }
 });
 
+// ========== ADMIN BONUS CREDIT ==========
+app.post("/api/admin/credit-bonus", adminMiddleware, async (req, res) => {
+    try {
+        const { userId, amount } = req.body;
+        
+        if (!userId || !amount || amount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid user or amount" });
+        }
+        
+        // Get user
+        const { data: user, error: userError } = await supabaseAdmin
+            .from('users')
+            .select('realBalance, username')
+            .eq('id', userId)
+            .single();
+        
+        if (userError || !user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        
+        // Credit bonus to real balance
+        const newBalance = (user.realBalance || 0) + amount;
+        const { error: updateError } = await supabaseAdmin
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', userId);
+        
+        if (updateError) throw updateError;
+        
+        // Record bonus transaction
+        const bonusRecord = {
+            id: `bonus-${Date.now()}-${userId}`,
+            user_id: userId,
+            username: user.username,
+            bonus_amount: amount,
+            status: 'admin_credited',
+            claimed_at: new Date().toISOString(),
+            admin_approved: true
+        };
+        
+        await supabaseAdmin
+            .from('giveaway_bonuses')
+            .insert(bonusRecord);
+        
+        res.json({ 
+            success: true, 
+            message: `Bonus credited to ${user.username}`,
+            newBalance
+        });
+    } catch (error) {
+        console.error("Admin credit bonus error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ========== START SERVER ==========
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
