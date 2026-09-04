@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <title>Admin Panel - Scratch & Win</title>
     <style>
+        :root {
+            --gold: #d4af37;
+        }
         body { background: #0a1929; color: white; font-family: Arial; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .header { background: #1a0033; padding: 20px; border-bottom: 3px solid #d4af37; position: relative; }
@@ -23,6 +26,33 @@
         .btn-delete { background: #dc3545; color: white; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .referral-code { font-family: monospace; font-weight: bold; color: #d4af37; }
+        
+        /* Bonus section styles */
+        .input-field {
+            background: #1a1a2e;
+            color: white;
+            border: 1px solid #334;
+            padding: 10px 14px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 14px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .input-field:focus {
+            border-color: var(--gold);
+        }
+        .section-gold {
+            border: 1px solid var(--gold) !important;
+        }
+        .btn-primary {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -34,7 +64,7 @@
         </button>
     </div>
 
-    <!-- Pending Transactions box (static for now – will not auto-update) -->
+    <!-- Pending Transactions box -->
     <div style="background: rgb(2, 58, 77); padding: 10px;">
         Pending Transactions: <span id="notifCount">0</span>
     </div>
@@ -167,7 +197,37 @@
                 <p><a href="game.html" style="color: #d4af37;">🎮 Back to Game</a></p>
             </div>
         </div>
+
+        <!-- BONUS CREDIT SECTION -->
+        <div class="section section-gold" style="background: #0a1929; padding: 20px; margin: 15px 0; border-radius: 8px; border: 1px solid var(--gold);">
+            <h4 style="color: var(--gold); margin-bottom: 10px;">🎁 Giveaway Bonus Credit</h4>
+            <p style="font-size: 13px; color: #ccc; margin-bottom: 15px;">
+                For users who came through the giveaway link, credit their bonus here.
+                <br>Total amount = User's deposit + 10x bonus (e.g., deposit ₦1,000 → credit ₦11,000)
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <select id="bonus-user" class="input-field" style="flex: 1; min-width: 150px;">
+                    <option value="">Select User...</option>
+                </select>
+                <input type="number" id="bonus-amount" class="input-field" placeholder="Total Amount (e.g., 11000)" style="flex: 1; min-width: 150px;">
+                <button class="btn btn-approve" onclick="creditBonus()">💰 Credit Bonus</button>
+            </div>
+            <div id="bonus-message" style="margin-top: 10px; font-size: 13px;"></div>=
+        </div>
     </div>
+
+      <!-- GIVEAWAY LINK GENERATOR -->
+<div class="section section-gold" style="background: #0a1929; padding: 20px; margin: 15px 0; border-radius: 8px; border: 1px solid var(--gold);">
+    <h4 style="color: var(--gold); margin-bottom: 10px;">🔗 Generate Giveaway Link</h4>
+    <p style="font-size: 13px; color: #ccc; margin-bottom: 15px;">
+        Generate a new giveaway link. Each link lasts 30 minutes or 30 claims.
+    </p>
+    <button class="btn btn-primary" onclick="generateGiveawayLink()">🔄 Generate New Link</button>
+    <div id="new-link-container" style="margin-top: 15px; display: none;">
+        <input type="text" id="new-link" class="input-field" style="width: 100%;" readonly>
+        <button class="btn btn-secondary" onclick="copyLink()" style="margin-top: 10px;">📋 Copy Link</button>
+    </div>
+</div>
 
     <script>
         const API = window.location.origin;
@@ -198,7 +258,10 @@
             
             switch(tabName) {
                 case 'users': loadUsers(); break;
-                case 'deposits': loadDeposits(); break;
+                case 'deposits': 
+                    loadDeposits(); 
+                    loadUsersForBonus(); // ✅ Load users for bonus dropdown
+                    break;
                 case 'withdrawals': loadWithdrawals(); break;
                 case 'unlock': loadEligibleUsers(); break;
                 case 'referrals': loadReferralStats(); break;
@@ -275,11 +338,12 @@
                             </td>
                             <td>${new Date(deposit.createdAt).toLocaleString()}</td>
                             <td>
-                                ${deposit.status === 'pending' ? `
-                                    <button class="btn btn-approve" onclick="approveDeposit('${deposit.id}')">✅ Approve</button>
-                                    <button class="btn btn-reject" onclick="rejectDeposit('${deposit.id}')">❌ Reject</button>
-                                ` : 'No actions'}
-                            </td>
+                        ${deposit.status === 'pending' ? `
+                            <input type="number" id="credit-amount-${deposit.id}" class="input-field" placeholder="Amount" style="width: 100px; padding: 4px 8px; font-size: 12px;">
+                            <button class="btn btn-approve" onclick="approveDepositWithAmount('${deposit.id}')">✅ Approve</button>
+                            <button class="btn btn-reject" onclick="rejectDeposit('${deposit.id}')">❌ Reject</button>
+                        ` : 'No actions'}
+                    </td>
                         `;
                         tbody.appendChild(row);
                     });
@@ -587,11 +651,129 @@
             }
         }
 
+        // ========== GIVEAWAY FUNCTIONS ==========
+        function generateGiveawayLink() {
+            localStorage.removeItem('giveaway_claims');
+            localStorage.removeItem('giveaway_expiry');
+            
+            const link = window.location.origin + '/giveaway.html';
+            document.getElementById('new-link').value = link;
+            document.getElementById('new-link-container').style.display = 'block';
+            alert('✅ New giveaway link generated! Share it with users.');
+        }
+
+        function copyLink() {
+            const link = document.getElementById('new-link');
+            link.select();
+            document.execCommand('copy');
+            alert('📋 Link copied!');
+        }
+
+        // Load users for bonus dropdown
+        async function loadUsersForBonus() {
+            try {
+                const response = await fetch(API + "/api/admin/users", { headers: adminHeaders });
+                const data = await response.json();
+                if (data.success) {
+                    const select = document.getElementById('bonus-user');
+                    select.innerHTML = '<option value="">Select User...</option>';
+                    data.users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = `${user.username} (Balance: ₦${(user.realBalance || 0).toLocaleString()})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error("Load users error:", error);
+            }
+        }
+
+// ========== APPROVE DEPOSIT WITH CUSTOM AMOUNT ==========
+async function approveDepositWithAmount(requestId) {
+    const amountInput = document.getElementById(`credit-amount-${requestId}`);
+    const amount = amountInput ? parseFloat(amountInput.value.trim()) : null;
+    
+    if (!amount || amount <= 0) {
+        alert("Please enter a valid amount to credit (e.g., 11000 for ₦1,000 deposit + ₦10,000 bonus)");
+        return;
+    }
+    
+    const notes = prompt("Approval notes (optional):");
+    
+    if (!confirm(`Credit ₦${amount.toLocaleString()} to this user?`)) return;
+    
+    try {
+        const response = await fetch(API + `/api/admin/approve-deposit-with-amount/${requestId}`, {
+            method: "POST",
+            headers: adminHeaders,
+            body: JSON.stringify({ amount, notes })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            alert(`✅ Deposit approved! User credited ₦${amount.toLocaleString()}.`);
+            loadDeposits();
+        } else {
+            alert(data.message || "Failed to approve deposit");
+        }
+    } catch (error) {
+        console.error("Approve deposit error:", error);
+        alert("Failed to approve deposit");
+    }
+}
+        // Credit bonus to user
+        async function creditBonus() {
+            const userId = document.getElementById('bonus-user').value;
+            const amount = document.getElementById('bonus-amount').value.trim();
+            const messageDiv = document.getElementById('bonus-message');
+            
+            if (!userId) {
+                messageDiv.innerHTML = '❌ Please select a user';
+                messageDiv.style.color = '#ff6b6b';
+                return;
+            }
+            if (!amount || parseFloat(amount) <= 0) {
+                messageDiv.innerHTML = '❌ Please enter a valid amount';
+                messageDiv.style.color = '#ff6b6b';
+                return;
+            }
+            
+            if (!confirm(`Credit ₦${parseFloat(amount).toLocaleString()} to this user?`)) return;
+            
+            try {
+                const response = await fetch(API + `/api/admin/credit-bonus`, {
+                    method: "POST",
+                    headers: adminHeaders,
+                    body: JSON.stringify({ userId, amount: parseFloat(amount) })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    messageDiv.innerHTML = `✅ Bonus credited! User new balance: ₦${data.newBalance.toLocaleString()}`;
+                    messageDiv.style.color = '#4caf50';
+                    loadUsersForBonus();
+                    loadUsers();
+                } else {
+                    messageDiv.innerHTML = `❌ ${data.message}`;
+                    messageDiv.style.color = '#ff6b6b';
+                }
+            } catch (error) {
+                console.error("Credit bonus error:", error);
+                messageDiv.innerHTML = '❌ Network error';
+                messageDiv.style.color = '#ff6b6b';
+            }
+        }
+
+        // ========== PENDING COUNT ==========
         setInterval(async () => {
-  const res = await fetch(API + '/api/admin/pending-count', { headers: adminHeaders });
-  const data = await res.json();
-  if (data.success) document.getElementById('notifCount').innerText = data.count;
-}, 5000);
+            try {
+                const res = await fetch(API + '/api/admin/pending-count', { headers: adminHeaders });
+                const data = await res.json();
+                if (data.success) document.getElementById('notifCount').innerText = data.count;
+            } catch (e) {
+                console.error('Pending count error:', e);
+            }
+        }, 5000);
 
         // ========== INITIAL LOAD ==========
         window.onload = function() {
@@ -599,6 +781,5 @@
         };
     </script>
 
-    <!-- Removed Supabase script – notifications now handled by backend -->
 </body>
 </html>

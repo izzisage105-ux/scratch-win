@@ -2001,6 +2001,102 @@ app.post("/game/crash/result", authMiddleware, async (req, res) => {
     }
 });
 
+// ========== APPROVE DEPOSIT WITH CUSTOM AMOUNT ==========
+app.post("/api/admin/approve-deposit-with-amount/:requestId", adminMiddleware, async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const { amount, notes } = req.body;
+        
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid amount" });
+        }
+        
+        // Get the deposit request
+        const { data: deposit, error: fetchError } = await supabaseAdmin
+            .from('deposits')
+            .select('*, users(username, realBalance, referred_by)')
+            .eq('id', requestId)
+            .eq('status', 'pending')
+            .single();
+        
+        if (fetchError || !deposit) {
+            return res.status(404).json({ success: false, message: "Deposit request not found or already processed" });
+        }
+        
+        // Update user's real balance with the custom amount
+        const userBalance = deposit.users?.realBalance || 0;
+        const newBalance = userBalance + amount;
+        
+        const { error: updateBalanceError } = await supabaseAdmin
+            .from('users')
+            .update({ realBalance: newBalance })
+            .eq('id', deposit.userId);
+        
+        if (updateBalanceError) throw updateBalanceError;
+        
+        // Update deposit status
+        const { error: updateDepositError } = await supabaseAdmin
+            .from('deposits')
+            .update({
+                status: 'approved',
+                approvedAt: new Date().toISOString(),
+                adminNotes: notes || `Credited ₦${amount.toLocaleString()} (Custom amount)`
+            })
+            .eq('id', requestId);
+        
+        if (updateDepositError) throw updateDepositError;
+        
+        // Handle referral commission if applicable
+        if (deposit.users?.referred_by) {
+            try {
+                const commissionRate = 0.05;
+                const commission = amount * commissionRate;
+                
+                await supabaseAdmin
+                    .from('users')
+                    .update({
+                        total_referral_deposits: supabaseAdmin.raw('COALESCE(total_referral_deposits,0) + ?', [amount]),
+                        referral_earnings: supabaseAdmin.raw('COALESCE(referral_earnings,0) + ?', [commission])
+                    })
+                    .eq('id', deposit.users.referred_by);
+                
+                await supabaseAdmin
+                    .from('referrals')
+                    .update({
+                        total_deposited: supabaseAdmin.raw('COALESCE(total_deposited,0) + ?', [amount]),
+                        commission_earned: supabaseAdmin.raw('COALESCE(commission_earned,0) + ?', [commission])
+                    })
+                    .eq('referred_id', deposit.userId);
+                
+                // Add commission to referrer's real balance
+                const { data: referrer } = await supabaseAdmin
+                    .from('users')
+                    .select('realBalance')
+                    .eq('id', deposit.users.referred_by)
+                    .single();
+                
+                if (referrer) {
+                    await supabaseAdmin
+                        .from('users')
+                        .update({ realBalance: (referrer.realBalance || 0) + commission })
+                        .eq('id', deposit.users.referred_by);
+                }
+            } catch (refErr) {
+                console.error('❌ Referral processing error (non‑critical):', refErr);
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: `Deposit approved. ₦${amount.toLocaleString()} credited.`,
+            deposit: { id: requestId, status: 'approved', amount }
+        });
+    } catch (error) {
+        console.error("Approve deposit error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ========== ADMIN BONUS CREDIT ==========
 app.post("/api/admin/credit-bonus", adminMiddleware, async (req, res) => {
     try {

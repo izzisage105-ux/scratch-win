@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎁 Free ₦500,000 Giveaway - SNW Games</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --deep-purple: #1a0033;
+            --light-purple: #330066;
+            --green: #008751;
+            --red: #dc3545;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a2a 0%, #1a0033 50%, #0d0d2b 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.1);
+            animation: floatParticle 15s infinite linear;
+        }
+        
+        @keyframes floatParticle {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
+        }
+        
+        .giveaway-container {
+            max-width: 480px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--gold);
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+        }
+        
+        .logo span {
+            color: white;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-item .number {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--gold);
+        }
+        
+        .status-item .label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+        }
+        
+        .status-item.claimed .number {
+            color: var(--red);
+        }
+        
+        .timer-section {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        
+        .timer-label {
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .timer-display {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .timer-unit {
+            text-align: center;
+        }
+        
+        .timer-number {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--gold);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 10px;
+            min-width: 50px;
+        }
+        
+        .timer-number.expired {
+            color: var(--red);
+        }
+        
+        .timer-text {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        
+        .hero {
+            text-align: center;
+            padding: 10px 0 20px;
+        }
+        
+        .hero-icon {
+            font-size: 80px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold), #ffd700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 15px 0 10px;
+        }
+        
+        .hero p {
+            font-size: 16px;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+        
+        .hero .highlight {
+            color: var(--gold);
+            font-weight: 700;
+        }
+        
+        .bonus-tiers {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 25px 0;
+        }
+        
+        .tier-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: all 0.3s;
+        }
+        
+        .tier-card:hover {
+            border-color: var(--gold);
+            transform: scale(1.02);
+        }
+        
+        .tier-card .deposit {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .tier-card .deposit strong {
+            color: white;
+            font-size: 18px;
+        }
+        
+        .tier-card .arrow {
+            color: var(--gold);
+            font-size: 20px;
+            margin: 0 10px;
+        }
+        
+        .tier-card .bonus {
+            text-align: right;
+        }
+        
+        .tier-card .bonus-amount {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--gold);
+        }
+        
+        .tier-card .bonus-label {
+            font-size: 11px;
+            color: #888;
+        }
+        
+        .tier-card .badge {
+            background: linear-gradient(135deg, var(--gold), #b8860b);
+            color: black;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-left: 8px;
+        }
+        
+        .claim-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .claim-btn {
+            background: linear-gradient(135deg, var(--gold), #b8860b);
+            color: black;
+            border: none;
+            padding: 18px 50px;
+            font-size: 22px;
+            font-weight: 800;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+            width: 100%;
+            max-width: 350px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .claim-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+        }
+        
+        .claim-btn:hover::before {
+            left: 100%;
+        }
+        
+        .claim-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.5);
+        }
+        
+        .claim-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .claim-btn.expired {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 25px 0;
+        }
+        
+        .feature-item {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .feature-item .icon {
+            font-size: 28px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .feature-item .label {
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .footer a {
+            color: var(--gold);
+            text-decoration: none;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1a0033, #330066);
+            border: 2px solid var(--gold);
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            animation: popIn 0.5s ease;
+        }
+        
+        .modal-content h2 {
+            color: var(--gold);
+            margin-bottom: 15px;
+        }
+        
+        .modal-content p {
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .modal-btn {
+            background: var(--gold);
+            color: black;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        .modal-btn-secondary {
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: white;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @media (max-width: 400px) {
+            .hero h1 { font-size: 24px; }
+            .tier-card { flex-wrap: wrap; justify-content: center; gap: 5px; }
+            .features { grid-template-columns: 1fr; }
+            .timer-number { font-size: 28px; min-width: 40px; }
+            .status-bar { flex-wrap: wrap; gap: 10px; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Particles -->
+    <div class="bg-particles" id="particles"></div>
+
+    <div class="giveaway-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🎮 SNW <span>GAMES</span></div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="number" id="claims-count">0</div>
+                <div class="label">Claims Made</div>
+            </div>
+            <div class="status-item">
+                <div class="number" id="claims-left">30</div>
+                <div class="label">Claims Left</div>
+            </div>
+            <div class="status-item">
+                <div class="number" id="status-indicator">🟢</div>
+                <div class="label" id="status-label">Active</div>
+            </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-section">
+            <div class="timer-label">⏳ Link Expires In</div>
+            <div class="timer-display">
+                <div class="timer-unit">
+                    <div class="timer-number" id="timer-minutes">30</div>
+                    <div class="timer-text">Mins</div>
+                </div>
+                <div class="timer-unit">
+                    <div class="timer-number" id="timer-seconds">00</div>
+                    <div class="timer-text">Secs</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-icon">🎁</div>
+            <h1>FREE ₦500,000 GIVEAWAY</h1>
+            <p>
+                Deposit and get <span class="highlight">10x BONUS</span> instantly!<br>
+                <span style="font-size: 14px; color: #888;">Limited time offer. <span id="claims-left-text">30</span> claims remaining.</span>
+            </p>
+        </div>
+
+        <!-- Bonus Tiers -->
+        <div class="bonus-tiers">
+            <div class="tier-card">
+                <div class="deposit">
+                    Deposit <strong>₦1,000</strong>
+                </div>
+                <div class="arrow">➜</div>
+                <div class="bonus">
+                    <div class="bonus-amount">₦10,000</div>
+                    <div class="bonus-label">Bonus + Deposit <span class="badge">10x</span></div>
+                </div>
+            </div>
+            <div class="tier-card">
+                <div class="deposit">
+                    Deposit <strong>₦5,000</strong>
+                </div>
+                <div class="arrow">➜</div>
+                <div class="bonus">
+                    <div class="bonus-amount">₦50,000</div>
+                    <div class="bonus-label">Bonus + Deposit <span class="badge">10x</span></div>
+                </div>
+            </div>
+            <div class="tier-card">
+                <div class="deposit">
+                    Deposit <strong>₦10,000</strong>
+                </div>
+                <div class="arrow">➜</div>
+                <div class="bonus">
+                    <div class="bonus-amount">₦100,000</div>
+                    <div class="bonus-label">Bonus + Deposit <span class="badge">10x</span></div>
+                </div>
+            </div>
+            <div class="tier-card">
+                <div class="deposit">
+                    Deposit <strong>₦50,000</strong>
+                </div>
+                <div class="arrow">➜</div>
+                <div class="bonus">
+                    <div class="bonus-amount">₦500,000</div>
+                    <div class="bonus-label">Bonus + Deposit <span class="badge">10x</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claim Button -->
+        <div class="claim-section">
+            <button class="claim-btn" id="claim-btn">🎯 CLAIM YOUR BONUS</button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;" id="claim-status">Click to claim your 10x bonus</p>
+        </div>
+
+        <!-- Features -->
+        <div class="features">
+            <div class="feature-item">
+                <span class="icon">✅</span>
+                <div class="label">Instant Bonus Credit</div>
+            </div>
+            <div class="feature-item">
+                <span class="icon">💰</span>
+                <div class="label">Admin Controlled</div>
+            </div>
+            <div class="feature-item">
+                <span class="icon">🎮</span>
+                <div class="label">Play All Games</div>
+            </div>
+            <div class="feature-item">
+                <span class="icon">👑</span>
+                <div class="label">Promoter Eligibility</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>🎮 SNW GAMES | <a href="#" onclick="showTerms()">Terms & Conditions</a></p>
+            <p style="margin-top: 5px; font-size: 10px; color: #444;">18+ only | Responsible Gaming</p>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">🎉 Claim Your Bonus!</h2>
+            <p id="modal-message">Create an account and deposit to receive your 10x bonus instantly!</p>
+            <div>
+                <button class="modal-btn" id="modal-action">Go to Site</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIGURATION ==========
+        const MAX_CLAIMS = 30;
+        const LINK_DURATION = 30; // minutes
+        
+        // ========== STATE ==========
+        let claimsMade = parseInt(localStorage.getItem('giveaway_claims') || '0');
+        let linkExpiry = localStorage.getItem('giveaway_expiry') || null;
+        let isExpired = false;
+        
+        // ========== TIMER ==========
+        function startTimer() {
+            // Check if link has expired
+            if (linkExpiry) {
+                const expiryTime = new Date(linkExpiry).getTime();
+                const now = Date.now();
+                const diff = expiryTime - now;
+                
+                if (diff <= 0) {
+                    setExpired();
+                    return;
+                }
+                
+                updateTimerDisplay(diff);
+                
+                const interval = setInterval(() => {
+                    const remaining = expiryTime - Date.now();
+                    if (remaining <= 0) {
+                        clearInterval(interval);
+                        setExpired();
+                        return;
+                    }
+                    updateTimerDisplay(remaining);
+                }, 1000);
+            } else {
+                // First time - set expiry
+                const expiry = new Date(Date.now() + LINK_DURATION * 60 * 1000);
+                localStorage.setItem('giveaway_expiry', expiry.toISOString());
+                linkExpiry = expiry.toISOString();
+                startTimer();
+            }
+        }
+        
+        function updateTimerDisplay(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            document.getElementById('timer-minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('timer-seconds').textContent = String(seconds).padStart(2, '0');
+        }
+        
+        function setExpired() {
+            isExpired = true;
+            document.getElementById('timer-minutes').textContent = '00';
+            document.getElementById('timer-seconds').textContent = '00';
+            document.getElementById('timer-minutes').classList.add('expired');
+            document.getElementById('timer-seconds').classList.add('expired');
+            document.getElementById('claim-btn').disabled = true;
+            document.getElementById('claim-btn').textContent = '⏰ LINK EXPIRED';
+            document.getElementById('claim-btn').classList.add('expired');
+            document.getElementById('claim-status').textContent = '❌ This giveaway link has expired. Check back for new offers!';
+            document.getElementById('status-indicator').textContent = '🔴';
+            document.getElementById('status-label').textContent = 'Expired';
+        }
+        
+        // ========== CLAIMS TRACKING ==========
+        function updateClaimsUI() {
+            const remaining = Math.max(0, MAX_CLAIMS - claimsMade);
+            document.getElementById('claims-count').textContent = claimsMade;
+            document.getElementById('claims-left').textContent = remaining;
+            document.getElementById('claims-left-text').textContent = remaining;
+            
+            if (claimsMade >= MAX_CLAIMS) {
+                document.getElementById('claim-btn').disabled = true;
+                document.getElementById('claim-btn').textContent = '❌ FULLY CLAIMED';
+                document.getElementById('claim-btn').classList.add('expired');
+                document.getElementById('claim-status').textContent = 'All 30 bonuses have been claimed!';
+                document.getElementById('status-indicator').textContent = '🔴';
+                document.getElementById('status-label').textContent = 'Fully Claimed';
+            }
+        }
+        
+        function incrementClaims() {
+            claimsMade++;
+            localStorage.setItem('giveaway_claims', claimsMade.toString());
+            updateClaimsUI();
+        }
+        
+        // ========== PARTICLES ==========
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 6 + 3;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = (Math.random() * 20 + 15) + 's';
+                particle.style.animationDelay = (Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        
+        // ========== MODAL ==========
+        function openModal(title, message, actionText, actionUrl) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').innerHTML = message;
+            const actionBtn = document.getElementById('modal-action');
+            actionBtn.textContent = actionText;
+            actionBtn.onclick = () => {
+                // Increment claims before redirecting
+                incrementClaims();
+                window.location.href = actionUrl;
+            };
+            document.getElementById('modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+        
+        // ========== CLAIM BUTTON ==========
+        document.getElementById('claim-btn').onclick = function() {
+            if (isExpired) {
+                openModal(
+                    '⏰ Link Expired',
+                    'This giveaway link has expired. Don\'t worry! We have new offers regularly.<br><br>Check back soon for more giveaways! 🎁',
+                    'Visit Site →',
+                    'index.html'
+                );
+                return;
+            }
+            
+            if (claimsMade >= MAX_CLAIMS) {
+                openModal(
+                    '❌ Fully Claimed',
+                    'All 30 bonuses have been claimed! But don\'t worry, we\'ll have more giveaways soon.<br><br>You can still play on our site and win real money! 🎮',
+                    'Visit Site →',
+                    'index.html'
+                );
+                return;
+            }
+            
+            // Check if user is logged in
+            const token = localStorage.getItem('token');
+            
+            if (token) {
+                // User is logged in - check if they already claimed this bonus
+                const hasClaimed = localStorage.getItem('giveaway_claimed_' + JSON.parse(atob(token.split('.')[1]))?.id);
+                
+                if (hasClaimed) {
+                    openModal(
+                        '✅ Already Claimed',
+                        'You have already claimed this bonus! Make a deposit and ask the admin to credit your bonus.<br><br>If you haven\'t received your bonus yet, contact support.',
+                        'Go to Site →',
+                        'index.html'
+                    );
+                    return;
+                }
+                
+                // Store that user has claimed
+                const userData = JSON.parse(atob(token.split('.')[1]));
+                localStorage.setItem('giveaway_claimed_' + userData.id, 'true');
+                
+                openModal(
+                    '🎉 Welcome Back!',
+                    'You\'re already logged in! 🎉<br><br>Make a deposit and your 10x bonus will be credited by the admin.<br><br><b>Deposit:</b> ₦1,000 → Get ₦10,000<br><b>Deposit:</b> ₦5,000 → Get ₦50,000<br><b>Deposit:</b> ₦10,000 → Get ₦100,000<br><b>Deposit:</b> ₦50,000 → Get ₦500,000<br><br>💰 After depositing, the admin will credit your bonus!',
+                    'Go to Site →',
+                    'index.html'
+                );
+            } else {
+                // User not logged in - redirect to auth
+                // Store that they came from giveaway
+                localStorage.setItem('giveaway_source', 'true');
+                
+                openModal(
+                    '🎁 Create Account First!',
+                    'To claim your 10x bonus giveaway, you need to create an account first.<br><br>It takes 30 seconds and gives you instant access to:<br><br>✅ ₦50,000 Demo Bonus<br>✅ 10+ Games<br>✅ Promoter Benefits<br>✅ Daily Giveaways<br><br>🎯 After creating an account, make a deposit and the admin will credit your 10x bonus!',
+                    'Create Account →',
+                    'auth.html'
+                );
+            }
+        };
+        
+        // ========== TERMS ==========
+        function showTerms() {
+            openModal(
+                '📋 Terms & Conditions',
+                '<b>🎁 10x Deposit Bonus Giveaway</b><br><br>1. Limited to 30 claims per link<br>2. Link expires after 30 minutes<br>3. One bonus per user<br>4. Admin manually credits bonus after deposit<br>5. Bonus is withdrawable after admin approval<br>6. Standard withdrawal requirements apply<br>7. SNW Games reserves the right to modify or cancel this offer<br><br>🎮 Play responsibly. 18+ only.',
+                'I Understand',
+                '#'
+            );
+        }
+        
+        // ========== ADMIN AUTO-CREDIT SYSTEM ==========
+        // When admin approves deposit in admin panel, they'll enter total amount
+        // This stores the giveaway flag so admin knows to credit bonus
+        
+        // Check if user came from giveaway
+        if (localStorage.getItem('giveaway_source') === 'true') {
+            // Show a notification on site
+            console.log('🎁 User came from giveaway');
+            // Could show a popup or banner on the site
+            setTimeout(() => {
+                // Clear after some time so it doesn't show every time
+                // localStorage.removeItem('giveaway_source');
+            }, 5000);
+        }
+        
+        // ========== INIT ==========
+        createParticles();
+        updateClaimsUI();
+        startTimer();
+        
+        // Close modal on outside click
+        document.getElementById('modal').onclick = function(e) {
+            if (e.target === this) closeModal();
+        };
+        
+        // Keyboard close
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+</body>
+</html>
